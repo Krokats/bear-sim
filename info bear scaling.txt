@@ -1,0 +1,117 @@
+Bear Simulation
+
+Summary Info:
+- When you reach 8% hit (usually 5% on gear since you get 3% from talent) or 5,6% crit reduction (note :  1 defense = 0,04% crit reduction) you can consider their "value" at 0.
+- 1 STR = 2 AP
+- 1 AGI = 2 Armor (doenst scale with Talents)
+- 20 AGI = 1% Dodge
+- 20 Agilty = 1% Crit
+- 1 Stamina = 10 Health (kein CAP), scales with Talents like Heart of the Wild
+- Crits deal double damage
+- Base Attack Speed = 2,5 s
+- Base Damage = 181 - 242 damage
+- Point for point, 1% Crit is a fair bit worse than 1% Hit because of the way the melee attack table works for bears in vanilla WoW: 
+100% of a bear's Threat generation comes from special ("yellow") abilities, which roll for crits separately after first performing an initial roll to check that the ability landed successfully.  Crit for Maul and Swipe. Conversely, this also means there is no concept of a "Crit cap" for bears like there is for Rogues and Warriors in vanilla, since bears optimally do not cast any "white" attacks that can glance when executing their TPS rotation.
+This means that misses, dodges, and parries all effectively suppress the value of 1%.
+- In feral forms, your weapon is a stat stick, the damage on it does not matter.
+- Chance on hit does not work in feral forms, chance on equip does.
+- Melee hit cap is 8%
+
+- Haste: 
+Haste increases your melee attack speed, and therefore increases the number of Mauls that can be cast in a given encounter. In vanilla WoW, when determining your character's melee swing timer, the game converts each source of % Haste from your gear and buffs into a Haste multiplier, and each of these factors are then multiplied together in order to determine a total attack speed multiplier for scaling your swing timer.
+Manual Crowd Pummler doesnt exist on Turtle WoW
+Note that the stat weight for Haste is nearly twice as high for bears as it is for cats. 
+This is because almost 100% of a bear's Threat generation is tied 1:1 to the swing timer via Maul. 
+In contrast, auto-attacks constitute only ~40% of a cat's DPS output, with the majority coming from instant cast abilities that do not benefit from Haste. 
+More generally, bears scale far better with Haste than any other spec in vanilla WoW due to their reliance on Maul.
+
+- Dodge:
+Dodge Chance increases the probability that you dodge incoming melee attacks, and is thus exclusively an avoidance stat that reduces a tank's average DTPS from mobs. 
+Dodge Chance typically comes in 1-2% increments on gear pieces, and is one of three possible ways to improve your total avoidance as a Feral tank in vanilla, 
+the others being Agility (which grants 0.05% Dodge per point) and Defense (which grants 0.04% Dodge per point but also increases the boss' chance to miss by an additional 0.04%).
+When gearing as a Feral tank in vanilla, it is recommended to put very little value on avoidance relative to EHP. 
+This is because avoidance does not synergize well with how damage intake and healing for tanks function in vanilla raids. 
+Incoming damage from raid bosses is extremely spikey in vanilla, and it is simply impossible to stack enough EHP to survive more than a few consecutive damage spikes from hard-hitting bosses even when gearing for mitigation. 
+This means that as a tank, you can never rely on dodges to keep you alive when you don't have enough Stamina or Armor to do so. 
+As a result, spam healing tanks and accepting a large amount of overhealing as a consequence is standard practice amongst competitive healing teams in vanilla. 
+Getting in a lucky dodge once in a while does not help these healing teams out whatsoever, as they need to be spam healing you regardless to avoid a death from a bad RNG spike, so the dodge just turns into more overhealing.
+
+- Defense:
+Defense serves three functions for Feral Druids when tanking raid bosses: 
+(1) It increases the tank's change to dodge boss attacks, 
+(2) It increases the chance that the boss misses the tank entirely, and 
+(3) It reduces the chance that the tank is critically hit. 
+Both (1) and (2) increase the total avoidance of the tank, with every 12.5 Defense Skill providing 1% total avoidance. 
+Therefore, there is a direct equivalency between Dodge Chance and Defense for avoidance.
+
+- Armor:
+Besides avoidance, Armor is the only source of physical damage mitigation for Feral tanks, since bears cannot block or parry. 
+The relationship between damage mitigation and Armor is r = A / (A + 5755), where r is the fraction of incoming damage that is mitigated, and A is the fully raid buffed Armor value in Dire Bear Form. 
+For example, a tank with 9,000 Armor mitigates 61% of incoming physical damage. 
+In Classic WoW, damage mitigation is capped at 75%, which corresponds to an Armor cap of 17.265 against a level 63 raid boss. 
+Each 1 Armor on a gear piece actually provides 4.6 armor when tanking due to the multiplier from Dire Bear Form, and this can be further boosted to 4.784 Armor if you spec into Thick Hide as part of the standard main tank build. 
+
+Changes in Turtle WoW:
+- can use consumes in bear form, 
+- no armor cap anymore, 
+- shapeshifting, 
+- haste buff from feral works in bear
+
+
+Dire Bear Form:
+- Increase Melee Attack Power by 180
+- Armor contribution from items by 360%
+- Health by 1240
+
+Tauren Racial: +5% health
+
+HP Calculation:
+HP = BaseHP[2124]+((CurrentStamina*HeartOfTheWild[1,2]-BaseStamina[72])*10+DireBearHP[1240])*TaurenRacial[1,05]
+
+
+Skills / Threat Scaling (Base values, without Feral Instinct Talent)						
+Auto Attack	1,30	Threat/Damage	Description	Next Melee	0 Rage	no CD	no GCD	Tested
+Swipe	1,75	Threat/Damage	Swipes 3 nearby enemies, inflicting 83 damage.	Instant	20 Rage	no CD	1,5 sec. GCD	Tested
+Maul	1,95	Threat/Damage	Increase the druid's next attack by 128 damage.	Next Melee	15 Rage	no CD	no GCD	Tested
+Savage Bite	2,60	Threat/Damage	dealing 80% normal damage plus additional 30damage	Instant	30 Rage	6 sec. CD	no GCD	Tested
+Thorns (Buff)	1,3	Threat/Damage	Causing 18 Nature damage to attackes when hit	buff	-	-	-	Skaliert nicht mit Nature Power
+Barkskin (Feral)	0	Threat/Damage	reducing Physical damage taken by 50% for the next 15 Attacks	Instant	0 Rage	10 min CD	1,5 sec. GCD
+Enrage	0	Threat/Damage	Generates 20 Rage of 10 sec., but reduces base armor by 16% in Dire Bear Form	Instant	0 Rage	1 min CD	no GCD
+Faerie Fire (Rank 4)	0	Threat/Damage	Decrease the armor of the target by 505 for 40 sec.	Instant	0 Rage	6 sec. CD	1 sec GCD
+
+
+Rage generation
+1 Rage / 100 Damage Taken
+1 rage / 20 Damage dealt
+
+Skills AP-Scaling
+Auto-Attack Base Range = 178 - 241 Dmg (Avg. 209)
+Auto Attack = ( 209 + 17,5%*(AP-BaseAP[300]))*NaturalWeapon[1.1]
+Maul = (Auto-Attack + 128) *PredatoryStrike[1,2]
+Savage Bite = (Auto-Attack*80% + 30)*PredatoryStrike[1,2])
+Swipe = ( 94 + 3,8%*(AP-Base-AP[300]))*PredatoryStrike[1,2]*NaturalWeapon[1.1]
+
+TALENTS
+Talents (Feral Combat)	
+Ferocity (5)	Reduces the cost of your Maul, Swipe, Savage Bite by 5 Rage
+Feral Instinct (3)	Increase threat caused by 15%
+Feral Aggression (5)	Increase Attack Power Reduction of your Demoralizing Roar by 40%
+Thick Hide (3)	Increase your Armor contribution from items by 10%
+Feral Switfness (2)	Increase your chance to dodge by 4%
+Sharpened Claws (3)	Increase Critical strike chance by 6%
+Primal Fury (2)	100% chance to gain an additional 5 Rage anytime you get a critical strike
+Predatory Strikes (3)	Increase melee attack power by 10%. Increase Damage by Maul, Swipe and Savage Bite by 20%
+Blood Frenzy (2)	Enrage instantly generates 10 Rage. In Addition, Tiger's Fury und Enrage increase your attack speed by 20% for 18 sec
+Ancient Brutality (2)	Dodging an attack imbues you with the "Spirit of the Ancient", generating 4 Rage per second for 5 sec. This effect can only occur once every 9 seconds
+Heart of the Wild (5)	Increase your Stamina by 20%
+Carnage (2)	Your Maul, Swipe and Savage Bite abilities return 5% of their damage as healing to you.
+Leader of the Pack (1)	Increase Ccritical chance by 3%
+	
+Talents (Restoration)	
+Furor (5)	gives you 100% chance to gain 10 Rage when you shapeshift into Bear Form
+	
+Talents (Balance)	
+Natural Weapon (3)	Increase the damage you deal by 10%. Also Increases chance to hit by 3%
+Omen of Clarity	Chance on hit (10%) to enter a Clearcasting stat. Reduces Rage cost of your next ability by 100% (can be triggered by white and yellow hits)
+
+

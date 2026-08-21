@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Krokat's Bear Tank Sim 1.18</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="Krokat.png">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- NEU: Chart.js -->
+</head>
+
+<body>
+
+    <div class="background-orb"></div>
+    <div id="toast" class="toast">Action Successful!</div>
+
+    <!-- Progress Overlay for Simulations -->
+    <div id="progressOverlay" class="progress-overlay hidden">
+        <div class="progress-box">
+            <canvas id="animCanvas" width="350" height="120"></canvas>
+            <div id="progressText" class="progress-text">Simulating Combat...</div>
+            <div class="progress-track">
+                <div id="progressFill" class="progress-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-layout">
+        <!-- Sidebar will be populated by JS -->
+        <nav class="sidebar" id="sidebar"></nav>
+
+        <main class="main-content">
+            <div class="container">
+
+                <header>
+                    <div class="header-title-row">
+                        <img src="Krokat.png" alt="Krokat" class="header-avatar">
+                        <h1>Krokat's Bear Sim</h1>
+                    </div>
+                    <input type="text" id="simName" class="sim-name-input" value="Simulation 1"
+                        onchange="updateSimName()">
+                    <div class="header-actions">
+                        <div class="sim-selector-dropdown">
+                            <button class="share-btn sim-selector-btn">Other Simulations ▼</button>
+                            <div class="sim-dropdown-content">
+                                <a href="https://krokats.github.io/feral-sim/">🐾 Feral Sim</a>
+                                <a href="https://krokats.github.io/boomkin-sim/">🦉 Moonkin Sim</a>
+                                <a href="https://krokats.github.io/bear-sim/" class="active-sim">🐻 Bear Sim</a>
+                                <a href="https://krokats.github.io/resto-sim/" class="disabled-sim">🌿 Resto Sim
+                                    (Soon)</a>
+                            </div>
+                        </div>
+                        <button onclick="importFromClipboard()" class="share-btn" style="margin-right: 5px;">📥
+                            Import</button>
+                        <button onclick="exportSettings()" class="share-btn">🔗 Share Setup</button>
+                    </div>
+                </header>
+
+                <!-- Modals -->
+                <div id="itemSelectorModal" class="modal-overlay hidden"
+                    onclick="if(event.target === this) closeItemModal()">
+                    <div class="modal-box">
+                        <div class="modal-header">
+                            <span class="modal-title" id="modalTitle">Select Item</span>
+                            <span class="modal-close" onclick="closeItemModal()">×</span>
+                        </div>
+                        <div class="modal-search">
+                            <input type="text" id="itemSearchInput" placeholder="Search item..."
+                                onkeyup="filterItemList()">
+                        </div>
+                        <div class="modal-list" id="modalItemList"></div>
+                    </div>
+                </div>
+
+                <div id="enchantSelectorModal" class="modal-overlay hidden"
+                    onclick="if(event.target === this) closeEnchantModal()">
+                    <div class="modal-box">
+                        <div class="modal-header">
+                            <span class="modal-title" id="enchantModalTitle">Select Enchant</span>
+                            <span class="modal-close" onclick="closeEnchantModal()">×</span>
+                        </div>
+                        <div class="modal-list" id="modalEnchantList"></div>
+                    </div>
+                </div>
+
+                <div id="wowTooltip" class="wow-tooltip"
+                    style="display:none; position:absolute; z-index:9999; background:rgba(0,0,0,0.95); border:1px solid #666; padding:10px; border-radius:4px; pointer-events:none;">
+                </div>
+
+                <div id="simulationViewWrapper">
+
+                    <!-- Comparison View / Übersicht -->
+                    <div id="comparisonView" class="hidden">
+                        <div class="card full-width">
+                            <div class="card-header">
+                                <h2>⚔️ Simulation Comparison</h2>
+                                <button onclick="runAllSims()" class="btn-mini primary-btn">Run All</button>
+                            </div>
+                            <div class="card-body">
+                                <div class="comparison-container" style="overflow-x: auto;">
+                                    <table class="result-table">
+                                        <thead>
+                                            <tr>
+                                                <th class="text-left">Name</th>
+                                                <th class="text-center">Dur</th>
+                                                <th class="text-center">Iter</th>
+                                                <th class="text-center">HP</th>
+                                                <th class="text-center">Armor</th>
+                                                <th class="text-center">AP</th>
+                                                <th class="text-center">Crit</th>
+                                                <th class="text-center">Hit</th>
+                                                <th class="text-center">Dodge</th>
+                                                <th class="text-center">Boss Lvl</th>
+                                                <th class="text-left">Gear / Sets</th>
+                                                <th style="color:#ef5350; text-align:right;">Avg TPS</th>
+                                                <th style="color:#90caf9; text-align:right;">Avg EHP</th>
+                                                <th style="color:#ffb74d; text-align:right;">Avg DTPS</th>
+                                                <th style="color:#a5d6a7; text-align:right;">Avg DPS</th>
+                                                <th style="text-align:center;">Del</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="comparisonBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="singleSimView">
+                        <div class="char-sheet">
+                            <div class="char-left" id="charLeftCol"></div>
+
+                            <div class="char-middle">
+                                <div
+                                    style="margin-bottom: 20px; background: rgba(0,0,0,0.2); padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border-color); width: 100%; box-sizing: border-box;">
+                                    <div
+                                        style="display: flex; align-items: center; gap: 5px; margin-bottom: 10px; flex-wrap: wrap;">
+                                        <label
+                                            style="white-space: nowrap; margin: 0; color: var(--text-color); font-size: 0.85rem;">Gear
+                                            Preset:</label>
+                                        <div class="select-wrapper" style="flex-grow: 1; margin: 0; min-width: 150px;">
+                                            <select id="bis_preset_select"
+                                                style="width: 100%; margin: 0; padding: 6px;">
+                                                <option value="">-- Select Preset --</option>
+                                            </select>
+                                        </div>
+                                        <button class="btn-mini" style="margin: 0; padding: 6px 10px;"
+                                            onclick="loadBiSPreset()">Load</button>
+                                        <button class="btn-mini"
+                                            style="margin: 0; padding: 6px 10px; color:#a5d6a7; border-color:#a5d6a7;"
+                                            onclick="saveGearPreset()">Save</button>
+                                        <button class="btn-mini"
+                                            style="margin: 0; padding: 6px 10px; color:#f44336; border-color:#f44336;"
+                                            onclick="deleteGearPreset()">Del</button>
+                                    </div>
+                                </div>
+
+                                <h2 style="margin-bottom:5px; font-size:1rem; text-align: center;">Stat Weights (EP =
+                                    TEP + MEP)</h2>
+                                <div class="gp-stats-config"
+                                    style="display: flex; flex-direction: column; gap: 10px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
+
+                                    <!-- Threat Equivalence Points (TEP) -->
+                                    <div
+                                        style="font-size: 0.8rem; color: var(--rage-red); font-weight: 600; text-transform: uppercase; text-align: center;">
+                                        Threat (TEP)</div>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+                                        <div class="gp-input-group"
+                                            style="display: flex; align-items: center; gap: 5px; margin: 0;"><label
+                                                style="margin: 0; font-size: 0.8rem;">AP</label><input type="number"
+                                                id="weight_ap" value="1" onchange="recalcItemScores()"
+                                                style="width: 45px; padding: 2px; text-align: center;"></div>
+                                        <div class="gp-input-group"
+                                            style="display: flex; align-items: center; gap: 5px; margin: 0;"><label
+                                                style="margin: 0; font-size: 0.8rem;">Str</label><input type="number"
+                                                id="weight_str" value="2.2" onchange="recalcItemScores()"
+                                                style="width: 45px; padding: 2px; text-align: center;"></div>
+                                        <div class="gp-input-group"
+                                            style="display: flex; align-items: center; gap: 5px; margin: 0;"><label
+                                                style="margin: 0; font-size: 0.8rem;">Agi</label><input type="number"
+                                                id="weight_agi" value="1.57" onchange="recalcItemScores()"
+                                                style="width: 45px; padding: 2px; text-align: center;"></div>
+                                        <div class="gp-input-group"
+                                            style="display: flex; align-items: center; gap: 5px; margin: 0;"><label
+                                                style="margin: 0; font-size: 0.8rem;">Crit</label><input type="number"
+                                                id="weight_crit" value="25.8" onchange="recalcItemScores()"
+                                                style="width: 45px; padding: 2px; text-align: center;"></div>
+                                        <div class="gp-input-group"
+                                            style="display: flex; align-items: center; gap: 5px; margin: 0;"><label
+                                                style="margin: 0; font-size: 0.8rem;">Hit</label><input type="number"
+                                                id="weight_hit" value="36.1" onchange="recalcItemScores()"
+                                                style="width: 45px; padding: 2px; text-align: center;"></div>
+                                        <div class="gp-input-group"
+                                            style="display: flex; align-items: center; gap: 5px; margin: 0;"><label
+                                                style="margin: 0; font-size: 0.8rem;">Haste</label><input type="number"
+                                                id="weight_haste" value="26.6" onchange="recalcItemScores()"
+                                                style="width: 45px; padding: 2px; text-align: center;"></div>
+                                        <div class="gp-input-group"
+                                            style="display: flex; align-items: center; gap: 5px; margin: 0;"><label
+                                                style="margin: 0; font-size: 0.8rem;">ArP</label><input type="number"
+                                                id="weight_arp" value="0.5" onchange="recalcItemScores()"
+                                                style="width: 45px; padding: 2px; text-align: center;"></div>
+                                    </div>
+
+                                    <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 5px 0;">
+
+                                    <!-- Mitigation Equivalence Points (MEP) -->
+                                    <div
+                                        style="font-size: 0.8rem; color: #90caf9; font-weight: 600; text-transform: uppercase; text-align: center; margin-top: 10px;">
+                                        Mitigation (MEP)</div>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+                                        <div class="gp-input-group"
+                                            style="display: flex; align-items: center; gap: 5px; margin: 0;"><label
+                                                style="margin: 0; font-size: 0.8rem;">Armor</label><input type="number"
+                                                id="weight_armor" value="0.33" onchange="recalcItemScores()"
+                                                style="width: 45px; padding: 2px; text-align: center;"></div>
+                                        <div class="gp-input-group"
+                                            style="display: flex; align-items: center; gap: 5px; margin: 0;"><label
+                                                style="margin: 0; font-size: 0.8rem;">Sta</label><input type="number"
+                                                id="weight_sta" value="2.2" onchange="recalcItemScores()"
+                                                style="width: 45px; padding: 2px; text-align: center;"></div>
+                                        <div class="gp-input-group"
+                                            style="display: flex; align-items: center; gap: 5px; margin: 0;"><label
+                                                style="margin: 0; font-size: 0.8rem;">Def</label><input type="number"
+                                                id="weight_def" value="0.46" onchange="recalcItemScores()"
+                                                style="width: 45px; padding: 2px; text-align: center;"></div>
+                                        <div class="gp-input-group"
+                                            style="display: flex; align-items: center; gap: 5px; margin: 0;"><label
+                                                style="margin: 0; font-size: 0.8rem;">Dodge</label><input type="number"
+                                                id="weight_dodge" value="0" onchange="recalcItemScores()"
+                                                style="width: 45px; padding: 2px; text-align: center;"></div>
+                                    </div>
+                                </div>
+
+                                <h2 style="margin:20px 0 10px 0; font-size:1rem;">Current Gear Stats</h2>
+                                <div class="gp-stats-preview"
+                                    style="background:transparent; border:none; padding:0; display:flex; flex-direction:column; align-items:center; gap:10px;">
+                                    <div
+                                        style="background: rgba(229, 57, 53, 0.15); border: 1px solid var(--rage-red); padding: 10px 20px; border-radius: 8px; text-align: center; width: 100%;">
+                                        <div
+                                            style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted);">
+                                            Total Gear Score (EP)</div>
+                                        <div id="gp_gs"
+                                            style="font-size: 2rem; font-weight: 700; color: #fff; text-shadow: 0 0 10px rgba(229, 57, 53, 0.5);">
+                                            0</div>
+                                        <div style="font-size: 0.85rem; color: #aaa; margin-top: 5px;">
+                                            TEP: <span id="gp_tep" style="color: #ef5350; font-weight: 600;">0</span> |
+                                            MEP: <span id="gp_mep" style="color: #90caf9; font-weight: 600;">0</span>
+                                        </div>
+                                    </div>
+                                    <div
+                                        style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; width: 100%;">
+                                        <div class="gp-stat-box"
+                                            style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; text-align: center;">
+                                            <div style="font-size:0.75rem; color:#aaa;">Str</div>
+                                            <div id="gp_str" style="font-size:1.1rem; color:#fff; font-weight:600;">0
+                                            </div>
+                                        </div>
+                                        <div class="gp-stat-box"
+                                            style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; text-align: center;">
+                                            <div style="font-size:0.75rem; color:#aaa;">Agi</div>
+                                            <div id="gp_agi" style="font-size:1.1rem; color:#fff; font-weight:600;">0
+                                            </div>
+                                        </div>
+                                        <div class="gp-stat-box"
+                                            style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; text-align: center;">
+                                            <div style="font-size:0.75rem; color:#aaa;">Sta</div>
+                                            <div id="gp_sta" style="font-size:1.1rem; color:#fff; font-weight:600;">0
+                                            </div>
+                                        </div>
+                                        <div class="gp-stat-box"
+                                            style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; text-align: center;">
+                                            <div style="font-size:0.75rem; color:#aaa;">Armor</div>
+                                            <div id="gp_armor" style="font-size:1.1rem; color:#fff; font-weight:600;">0
+                                            </div>
+                                        </div>
+                                        <div class="gp-stat-box"
+                                            style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; text-align: center;">
+                                            <div style="font-size:0.75rem; color:#aaa;">HP</div>
+                                            <div id="gp_hp" style="font-size:1.1rem; color:#fff; font-weight:600;">0
+                                            </div>
+                                        </div>
+                                        <div class="gp-stat-box"
+                                            style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; text-align: center;">
+                                            <div style="font-size:0.75rem; color:#aaa;">Defense</div>
+                                            <div id="gp_def" style="font-size:1.1rem; color:#fff; font-weight:600;">0
+                                            </div>
+                                        </div>
+                                        <div class="gp-stat-box"
+                                            style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; text-align: center;">
+                                            <div style="font-size:0.75rem; color:#aaa;">Dodge</div>
+                                            <div id="gp_dodge" style="font-size:1.1rem; color:#fff; font-weight:600;">0%
+                                            </div>
+                                        </div>
+                                        <div class="gp-stat-box"
+                                            style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; text-align: center;">
+                                            <div style="font-size:0.75rem; color:#aaa;">AP</div>
+                                            <div id="gp_ap" style="font-size:1.1rem; color:#fff; font-weight:600;">0
+                                            </div>
+                                        </div>
+                                        <div class="gp-stat-box"
+                                            style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; text-align: center;">
+                                            <div style="font-size:0.75rem; color:#aaa;">Crit</div>
+                                            <div id="gp_crit" style="font-size:1.1rem; color:#fff; font-weight:600;">0%
+                                            </div>
+                                        </div>
+                                        <div class="gp-stat-box"
+                                            style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; text-align: center;">
+                                            <div style="font-size:0.75rem; color:#aaa;">Hit</div>
+                                            <div id="gp_hit" style="font-size:1.1rem; color:#fff; font-weight:600;">0%
+                                            </div>
+                                        </div>
+                                        <div class="gp-stat-box"
+                                            style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; text-align: center;">
+                                            <div style="font-size:0.75rem; color:#aaa;">Haste</div>
+                                            <div id="gp_haste" style="font-size:1.1rem; color:#fff; font-weight:600;">0%
+                                            </div>
+                                        </div>
+                                        <div class="gp-stat-box"
+                                            style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; text-align: center;">
+                                            <div style="font-size:0.75rem; color:#aaa;">ArP</div>
+                                            <div id="gp_arp" style="font-size:1.1rem; color:#fff; font-weight:600;">0
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="margin-top:20px; width:100%;">
+                                    <button onclick="resetGear()" class="btn-mini"
+                                        style="background:#333; width:100%;">Reset Gear</button>
+                                </div>
+                            </div>
+
+                            <div class="char-right" id="charRightCol"></div>
+                            <div class="char-bottom" id="charBottomRow"></div>
+                        </div>
+
+                        <!-- Collapsible Configuration Grid -->
+                        <div class="grid-container">
+
+                            <!-- Buffs & Consumables -->
+                            <!-- Buffs & Consumables -->
+                            <div class="card full-width collapsed">
+                                <div class="card-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                                    <h2>✨ Buffs & Consumables</h2>
+                                </div>
+                                <div class="card-body">
+
+                                    <div class="gear-section-title">Exclusive Consumables (Max 1 per Category)</div>
+                                    <div class="grid-container"
+                                        style="grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                                        <div class="input-group-small" style="margin:0;">
+                                            <label>Weapon Buff</label>
+                                            <div class="select-wrapper">
+                                                <select id="consum_weapon">
+                                                    <option value="none">None</option>
+                                                    <option value="consecrated">Consecrated Sharpening Stone (+100 AP)
+                                                    </option>
+                                                    <option value="elemental">Elemental Sharpening Stone (+2% Crit)
+                                                    </option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="input-group-small" style="margin:0;">
+                                            <label>ZG Buff</label>
+                                            <div class="select-wrapper">
+                                                <select id="consum_zg">
+                                                    <option value="none">None</option>
+                                                    <option value="spirit">Spirit of Zanza (+50 Sta/Spi)</option>
+                                                    <option value="swiftness">Swiftness of Zanza (+20% MS)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="input-group-small" style="margin:0;">
+                                            <label>Blasted Lands</label>
+                                            <div class="select-wrapper">
+                                                <select id="consum_blasted">
+                                                    <option value="none">None</option>
+                                                    <option value="scorpok">Ground Scorpok Assay (+25 Agi)</option>
+                                                    <option value="roids">R.O.I.D.S. (+25 Str)</option>
+                                                    <option value="lungjuice">Lung Juice Cocktail (+25 Sta)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="input-group-small" style="margin:0;">
+                                            <label>AP Juju / Brew</label>
+                                            <div class="select-wrapper">
+                                                <select id="consum_ap_buff">
+                                                    <option value="none">None</option>
+                                                    <option value="firewater">Winterfall Firewater (+35 AP)</option>
+                                                    <option value="blackroot">Blackroot Brew (+35 AP)</option>
+                                                    <option value="juju_might">Juju Might (+40 AP)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="input-group-small" style="margin:0;">
+                                            <label>Food</label>
+                                            <div class="select-wrapper">
+                                                <select id="consum_food">
+                                                    <option value="none">None</option>
+                                                    <option value="dumplings">Smoked Desert Dumplings (+20 Str)</option>
+                                                    <option value="telabim">Danonzo's Tel'abim medley (+2% Haste)
+                                                    </option>
+                                                    <option value="mushroom">Hardened Mushroom (+25 Sta)</option>
+                                                    <option value="berry">Sour Mountain Berry (+10 Agi)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="input-group-small" style="margin:0;">
+                                            <label>Alcohol</label>
+                                            <div class="select-wrapper">
+                                                <select id="consum_alcohol">
+                                                    <option value="none">None</option>
+                                                    <option value="merlot">Medivh's Merlot (+25 Sta)</option>
+                                                    <option value="rumsey">Rumsey Rum Black Label (+15 Sta)</option>
+                                                    <option value="gordok">Gordok Green Grog (+10 Sta)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="gear-section-title">Elixirs, Flasks & Stackable Misc</div>
+                                    <div class="checkbox-grid">
+                                        <label class="custom-checkbox"><input type="checkbox"
+                                                id="consum_flask_titan"><span class="checkmark"></span> Flask of the
+                                            Titans (1200 HP)</label>
+                                        <label class="custom-checkbox"><input type="checkbox"
+                                                id="consum_elixir_mongoose" checked><span class="checkmark"></span>
+                                            Elixir of the Mongoose</label>
+                                        <label class="custom-checkbox"><input type="checkbox"
+                                                id="consum_elixir_fortitude"><span class="checkmark"></span> Elixir of
+                                            Fortitude (120 HP)</label>
+                                        <label class="custom-checkbox"><input type="checkbox"
+                                                id="consum_elixir_defense"><span class="checkmark"></span> Elixir of
+                                            Superior Defense</label>
+                                        <label class="custom-checkbox"><input type="checkbox"
+                                                id="consum_crystal_ward"><span class="checkmark"></span> Crystal Ward
+                                            (200 Armor)</label>
+                                        <label class="custom-checkbox"><input type="checkbox"
+                                                id="consum_trolls_blood"><span class="checkmark"></span> Major Troll's
+                                            Blood (20 hp5)</label>
+                                        <label class="custom-checkbox"><input type="checkbox" id="consum_arthas"><span
+                                                class="checkmark"></span> Gift of Arthas</label>
+                                        <label class="custom-checkbox"><input type="checkbox"
+                                                id="consum_juju_power"><span class="checkmark"></span> Juju Power (+30
+                                            Str)</label>
+                                        <label class="custom-checkbox"><input type="checkbox" id="consum_bogling"><span
+                                                class="checkmark"></span> Bogling Root (+1 Dmg)</label>
+                                    </div>
+
+                                    <div class="gear-section-title">Active Combat Potions</div>
+                                    <div class="checkbox-grid">
+                                        <label class="custom-checkbox"><input type="checkbox"
+                                                id="consum_quickness"><span class="checkmark"></span> Potion of
+                                            Quickness (5% Haste / 30s)</label>
+                                        <label class="custom-checkbox"><input type="checkbox"
+                                                id="consum_stoneshield"><span class="checkmark"></span> Greater
+                                            Stoneshield (2000 Armor / 2m)</label>
+                                        <!-- Hinweis: Mighty Rage ist bereits als Potion im Rotation-Builder integriert -->
+                                    </div>
+
+                                    <div class="gear-section-title">Raid Buffs</div>
+                                    <div class="checkbox-grid">
+                                        <label class="custom-checkbox"><input type="checkbox" id="buff_motw"
+                                                checked><span class="checkmark"></span> Mark of the Wild</label>
+                                        <label class="custom-checkbox"><input type="checkbox" id="buff_kings"
+                                                checked><span class="checkmark"></span> Blessing of Kings</label>
+                                        <label class="custom-checkbox"><input type="checkbox" id="buff_might"
+                                                checked><span class="checkmark"></span> Blessing of Might</label>
+                                        <label class="custom-checkbox"><input type="checkbox" id="buff_bs" checked><span
+                                                class="checkmark"></span> Battle Shout</label>
+                                        <label class="custom-checkbox"><input type="checkbox" id="buff_fortitude"
+                                                checked><span class="checkmark"></span> Power Word: Fortitude</label>
+                                        <label class="custom-checkbox"><input type="checkbox" id="buff_bloodpact"
+                                                checked><span class="checkmark"></span> Blood Pact</label>
+                                        <label class="custom-checkbox"><input type="checkbox" id="buff_tsa"
+                                                checked><span class="checkmark"></span> Trueshot Aura</label>
+                                        <label class="custom-checkbox"><input type="checkbox" id="buff_wf_totem"
+                                                checked><span class="checkmark"></span> Windfury Totem</label>
+                                        <label class="custom-checkbox"><input type="checkbox" id="buff_goa_totem"
+                                                checked><span class="checkmark"></span> Grace of Air</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 4-Column Config (General, Stats, Enemy, Talents) -->
+                            <div class="card full-width collapsed">
+                                <div class="card-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                                    <h2>⚙️ Configuration </h2>
+                                </div>
+                                <div class="card-body">
+                                    <!-- Das Grid nutzt nun CSS-Klassen ähnlich wie bei der Katze -->
+                                    <div class="grid-container"
+                                        style="margin:0; padding:0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;">
+
+                                        <!-- Column 1: General -->
+                                        <div class="card" style="margin:0;">
+                                            <div class="sub-card-header">
+                                                <h2>⚙️ General</h2>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="input-group"><label>Combat Time (sec)</label><input
+                                                        type="number" id="simTime" value="60"></div>
+                                                <div class="input-group"><label>Iterations</label><input type="number"
+                                                        id="simCount" value="1000"></div>
+                                                <div class="input-group">
+                                                    <label>Race</label>
+                                                    <div class="select-wrapper">
+                                                        <select id="char_race">
+                                                            <option value="Tauren" selected>Tauren</option>
+                                                            <option value="NightElf">Night Elf</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Column 2: Player Stats -->
+                                        <div class="card" style="margin:0;">
+                                            <div class="sub-card-header">
+                                                <div
+                                                    style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                                                    <h2>📈 Player Stats</h2>
+
+                                                </div>
+                                            </div>
+                                            <div style="display:flex; align-items:center;">
+                                                <label class="toggle" style="transform: scale(0.7); margin:0;">
+                                                    <input type="checkbox" id="manual_stats">
+                                                    <span class="slider"></span>
+                                                </label>
+                                                <span
+                                                    style="font-size:0.7em; color:#888; margin-left:5px;">Manual</span>
+                                            </div>
+                                            <div class="card-body">
+                                                <div
+                                                    style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; align-items: center;">
+                                                    <div class="input-wrapper"><label
+                                                            style="font-size:0.8rem;">HP</label><input type="number"
+                                                            id="stat_hp" disabled
+                                                            style="width:100%; box-sizing:border-box;"></div>
+                                                    <div class="input-wrapper"><label
+                                                            style="font-size:0.8rem;">Armor</label><input type="number"
+                                                            id="stat_armor" disabled
+                                                            style="width:100%; box-sizing:border-box;"></div>
+                                                    <div class="input-wrapper"><label
+                                                            style="font-size:0.8rem;">Defense</label><input
+                                                            type="number" id="stat_defense" disabled
+                                                            style="width:100%; box-sizing:border-box;"></div>
+
+                                                    <div class="input-wrapper"><label
+                                                            style="font-size:0.8rem;">Str</label><input type="number"
+                                                            id="stat_str" disabled
+                                                            style="width:100%; box-sizing:border-box;"></div>
+                                                    <div class="input-wrapper"><label
+                                                            style="font-size:0.8rem;">Agi</label><input type="number"
+                                                            id="stat_agi" disabled
+                                                            style="width:100%; box-sizing:border-box;"></div>
+                                                    <div class="input-wrapper"><label
+                                                            style="font-size:0.8rem;">Sta</label><input type="number"
+                                                            id="stat_sta" disabled
+                                                            style="width:100%; box-sizing:border-box;"></div>
+
+                                                    <div class="input-wrapper"><label
+                                                            style="font-size:0.8rem;">AP</label><input type="number"
+                                                            id="stat_ap" disabled
+                                                            style="width:100%; box-sizing:border-box;"></div>
+                                                    <div class="input-wrapper"><label style="font-size:0.8rem;">Crit
+                                                            %</label><input type="number" id="stat_crit" disabled
+                                                            style="width:100%; box-sizing:border-box;"></div>
+                                                    <div class="input-wrapper"><label style="font-size:0.8rem;">Hit
+                                                            %</label><input type="number" id="stat_hit" disabled
+                                                            style="width:100%; box-sizing:border-box;"></div>
+
+                                                    <div class="input-wrapper"><label style="font-size:0.8rem;">Dodge
+                                                            %</label><input type="number" id="stat_dodge" disabled
+                                                            style="width:100%; box-sizing:border-box;"></div>
+                                                    <div class="input-wrapper"><label style="font-size:0.8rem;">Haste
+                                                            %</label><input type="number" id="stat_haste" value="0"
+                                                            disabled style="width:100%; box-sizing:border-box;"></div>
+                                                    <div class="input-wrapper"><label
+                                                            style="font-size:0.8rem;">ArP</label><input type="number"
+                                                            id="stat_arp" value="0" disabled
+                                                            style="width:100%; box-sizing:border-box;"></div>
+                                                </div>
+
+                                            </div>
+                                        </div>
+
+                                        <!-- Column 3: Bear Talents -->
+                                        <!-- Column 3: Bear Talents -->
+                                        <div class="card" style="margin:0;">
+                                            <div class="sub-card-header">
+                                                <h2>🌿 Bear Talents</h2>
+                                            </div>
+                                            <div class="card-body">
+
+                                                <div class="input-group">
+                                                    <label style="color:#ffb74d;">Flex Points (Choose 1)</label>
+                                                    <div class="select-wrapper">
+                                                        <select id="tal_flex">
+                                                            <option value="swiftness" selected>Feral Swiftness (+4%
+                                                                Dodge)</option>
+                                                            <option value="aggression">Feral Aggression (+16% Demo Roar
+                                                                effect)</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                <p style="font-size:0.75rem; color:#888; margin-bottom:10px;">Core Feral
+                                                    Tank Build (11/35/5) is permanently active.</p>
+
+                                                <div
+                                                    style="background:rgba(0,0,0,0.2); border:1px solid #333; border-radius:4px; padding:10px; margin-bottom:10px; font-size:0.8rem; color:#aaa; max-height: 250px; overflow-y: auto;">
+                                                    <ul
+                                                        style="margin:0; padding-left:15px; display:flex; flex-direction:column; gap:4px;">
+                                                        <li><b style="color:#fff;">Ferocity:</b> -5 Rage cost</li>
+                                                        <li><b style="color:#fff;">Feral Instinct:</b> +15% Threat</li>
+                                                        <li><b style="color:#fff;">Thick Hide:</b> +10% Armor</li>
+                                                        <li><b style="color:#fff;">Sharpened Claws:</b> +6% Crit</li>
+                                                        <li><b style="color:#fff;">Primal Fury:</b> +5 Rage on Crit</li>
+                                                        <li><b style="color:#fff;">Predatory Strikes:</b> +10% AP, +20%
+                                                            Dmg</li>
+                                                        <li><b style="color:#fff;">Blood Frenzy:</b> +10 Rage, +20%
+                                                            Attack Speed on Enrage</li>
+                                                        <li><b style="color:#fff;">Ancient Brutality:</b> +4 Rage/s on
+                                                            Dodge</li>
+                                                        <li><b style="color:#fff;">Heart of the Wild:</b> +20% Stamina
+                                                        </li>
+                                                        <li><b style="color:#fff;">Carnage:</b> 5% Heal from
+                                                            Maul/Swipe/Bite</li>
+                                                        <li><b style="color:#fff;">Leader of the Pack:</b> +3% Crit</li>
+                                                        <li><b style="color:#fff;">Furor:</b> +10 Rage on Shapeshift
+                                                        </li>
+                                                        <li><b style="color:#fff;">Natural Weapons:</b> +10% Dmg, +3%
+                                                            Hit</li>
+                                                        <li><b style="color:#fff;">Omen of Clarity:</b> Clearcasting
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Column 4: Enemy Target -->
+                                        <div class="card" style="margin:0;">
+                                            <div class="sub-card-header">
+                                                <h2>💀 Enemy Target</h2>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="input-group">
+                                                    <label>Boss Preset</label>
+                                                    <div class="select-wrapper">
+                                                        <select id="enemy_boss_select"></select>
+                                                    </div>
+                                                </div>
+                                                <div class="input-group"><label>Level</label><input type="number"
+                                                        id="enemy_level" value="63"></div>
+                                                <div class="input-group"><label>Armor</label><input type="number"
+                                                        id="enemy_armor" value="4611"></div>
+                                                <div class="input-group"><label>Base Damage</label><input type="number"
+                                                        id="boss_base_dmg" value="6000"></div>
+                                                <div class="input-group"><label>Attack Speed (s)</label><input
+                                                        type="number" id="boss_attack_speed" value="1.2" step="0.1">
+                                                </div>
+
+                                                <div class="checkbox-grid" style="grid-template-columns: 1fr; margin-bottom: 10px;">
+                                                    <label class="custom-checkbox" style="color: #ffb74d;">
+                                                        <input type="checkbox" id="enemy_mechanics"><span class="checkmark"></span> Enable Boss Abilities (Spike Dmg)
+                                                    </label>
+                                                </div>
+
+                                                <div class="gear-section-title">Target Debuffs</div>
+                                                <div class="checkbox-grid" style="grid-template-columns: 1fr;">
+                                                    <label class="custom-checkbox"><input type="checkbox"
+                                                            id="debuff_major_armor" checked><span
+                                                            class="checkmark"></span> Sunder / Expose (-2550)</label>
+                                                    <label class="custom-checkbox"><input type="checkbox" id="debuff_ff"
+                                                            checked><span class="checkmark"></span> Faerie Fire
+                                                        (-505)</label>
+                                                    <label class="custom-checkbox"><input type="checkbox"
+                                                            id="debuff_cor" checked><span class="checkmark"></span>
+                                                        Curse of Recklessness (-640)</label>
+                                                    <label class="custom-checkbox"><input type="checkbox"
+                                                            id="debuff_eskhandar"><span class="checkmark"></span>
+                                                        Eskhandar's Collar (-250)</label>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Gear Sets / Detected Items -->
+                            <div class="card full-width collapsed">
+                                <div class="card-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                                    <h2>🛡️ Gear & Sets</h2>
+                                </div>
+                                <div class="card-body">
+                                    <div class="gear-section-title">Active Idols (Detected)</div>
+                                    <div class="checkbox-grid">
+                                        <label class="custom-checkbox"><input type="checkbox" id="idol_brutality"
+                                                disabled><span class="checkmark"></span> Idol of Brutality</label>
+                                    </div>
+                                    <div class="gear-section-title">Active Sets (Detected)</div>
+                                    <div class="checkbox-grid">
+                                        <label class="custom-checkbox"
+                                            title="Reduces damage taken from critical hits and damage over time effects by 6%.">
+                                            <input type="checkbox" id="ui_set_veneran" disabled><span
+                                                class="checkmark"></span> Veneran's (6/6)
+                                        </label>
+                                        <label class="custom-checkbox"
+                                            title="Your successful melee attacks have a 5% chance to restore 20 Rage.">
+                                            <input type="checkbox" id="ui_set_ursa3" disabled><span
+                                                class="checkmark"></span> Ursa (3/6)
+                                        </label>
+                                        <label class="custom-checkbox"
+                                            title="Melee crits grant Brooding Rage. At 0 stacks: +25 phys. damage and +25 Str for 10 sec.">
+                                            <input type="checkbox" id="ui_set_ursa5" disabled><span
+                                                class="checkmark"></span> Ursa (5/6)
+                                        </label>
+                                        <label class="custom-checkbox"
+                                            title="Reduces the Rage cost of your Savage Bite by 50%.">
+                                            <input type="checkbox" id="ui_set_stormrage5" disabled><span
+                                                class="checkmark"></span> Stormrage (5/8)
+                                        </label>
+                                        <label class="custom-checkbox"
+                                            title="Increase the health contribution of Bear and Dire Bear Form by 25%.">
+                                            <input type="checkbox" id="ui_set_dreamwalker6" disabled><span
+                                                class="checkmark"></span> Dreamwalker (6/8)
+                                        </label>
+                                        <label class="custom-checkbox"
+                                            title="Using Savage Bite reduces all damage taken by 2% for 15 sec. Stacks up to 4 times.">
+                                            <input type="checkbox" id="ui_set_dreamwalker8" disabled><span
+                                                class="checkmark"></span> Dreamwalker (8/8)
+                                        </label>
+                                        <label class="custom-checkbox"
+                                            title="Reduces the cooldown of Faerie Fire (Feral) by 2 seconds.">
+                                            <input type="checkbox" id="ui_set_cenarion3" disabled><span
+                                                class="checkmark"></span> Cenarion (3/8)
+                                        </label>
+                                    </div>
+                                    <div class="gear-section-title">Active Effects / Trinkets (Detected)</div>
+                                    <div class="checkbox-grid">
+                                        <label class="custom-checkbox"
+                                            title="3% chance when struck to gain 600 Armor (10 charges). Deals 400 Fire Dmg when depleted.">
+                                            <input type="checkbox" id="ui_item_obsidian" disabled><span
+                                                class="checkmark"></span> Obsidian Scale
+                                        </label>
+                                        <label class="custom-checkbox"
+                                            title="2% chance on melee hit to gain 1 extra attack.">
+                                            <input type="checkbox" id="ui_item_hoj" disabled><span
+                                                class="checkmark"></span> Hand of Justice
+                                        </label>
+                                        <label class="custom-checkbox"
+                                            title="On-Use: Increases Attack Power by 260 for 20 sec.">
+                                            <input type="checkbox" id="ui_item_slayers" disabled><span
+                                                class="checkmark"></span> Slayer's Crest
+                                        </label>
+                                        <label class="custom-checkbox"
+                                            title="On-Use: Increases your attack speed by 20% for 15 sec.">
+                                            <input type="checkbox" id="ui_item_spider" disabled><span
+                                                class="checkmark"></span> Kiss of the Spider
+                                        </label>
+                                        <label class="custom-checkbox"
+                                            title="3% of damage dealt is returned as healing.">
+                                            <input type="checkbox" id="ui_item_grail" disabled><span
+                                                class="checkmark"></span> Grail of F.M.
+                                        </label>
+                                        <label class="custom-checkbox"
+                                            title="2% of damage dealt is returned as healing.">
+                                            <input type="checkbox" id="ui_item_tooth" disabled><span
+                                                class="checkmark"></span> Tooth of the Packlord
+                                        </label>
+                                        <label class="custom-checkbox"
+                                            title="When struck in combat inflicts 1 Nature Damage to the attacker.">
+                                            <input type="checkbox" id="ui_item_mossheart" disabled><span
+                                                class="checkmark"></span> Mossheart's Heart
+                                        </label>
+                                        <label class="custom-checkbox"
+                                            title="When struck in combat inflicts 4 Nature Damage to the attacker.">
+                                            <input type="checkbox" id="ui_item_whip" disabled><span
+                                                class="checkmark"></span> Lasher's Whip
+                                        </label>
+                                        <label class="custom-checkbox"
+                                            title="When struck in combat inflicts 4 Nature Damage to the attacker.">
+                                            <input type="checkbox" id="ui_item_horn" disabled><span
+                                                class="checkmark"></span> Horn of Engryss
+                                        </label>
+                                        <label class="custom-checkbox"
+                                            title="2% chance on successful attacks to grant 1 extra attack.">
+                                            <input type="checkbox" id="ui_ench_surrender" disabled><span
+                                                class="checkmark"></span> Surrender to Madness
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Damage & Threat Scaling Calculation -->
+                            <div class="card full-width collapsed">
+                                <div class="card-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                                    <h2>📐 Damage & Threat Scaling Calculation</h2>
+                                </div>
+                                <div class="card-body">
+                                    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:15px;">
+                                        This table shows the calculated non-crit damage and threat of your abilities
+                                        based on current AP and active talents/buffs before enemy armor mitigation.
+                                    </p>
+                                    <div class="table-wrapper">
+                                        <table class="result-table">
+                                            <thead>
+                                                <tr>
+                                                    <th class="text-left">Ability</th>
+                                                    <th class="text-left">Base / Damage Formula</th>
+                                                    <th class="text-right">Final Avg Hit</th>
+                                                    <th class="text-right">Threat Multiplier</th>
+                                                    <th class="text-right">Final Threat</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="scalingTableBody">
+                                                <!-- Wird durch JS dynamisch gefüllt -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Rotation Builder -->
+                            <div class="card full-width collapsed" style="overflow: visible !important;">
+                                <div class="card-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                                    <h2>🛠️ Priority Rotation Builder</h2>
+                                </div>
+                                <div class="card-body">
+                                    <div class="rotation-builder-container">
+                                        <div
+                                            style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:15px; border-bottom:1px solid var(--border-color); padding-bottom:15px; flex-wrap:wrap; gap:10px;">
+                                            <div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+                                                <div class="input-group" style="margin:0; width:250px;">
+                                                    <label>Presets</label>
+                                                    <div class="select-wrapper">
+                                                        <select id="rotation_preset_select"></select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div style="display:flex; gap:10px;">
+                                                <button class="btn-mini" onclick="saveCustomPreset()"
+                                                    style="color:#a5d6a7; border-color:#a5d6a7;">Save Custom</button>
+                                                <button class="btn-mini" onclick="deleteCustomPreset()"
+                                                    style="color:#f44336; border-color:#f44336;">Del</button>
+                                                <button class="btn-mini" onclick="clearRotation()"
+                                                    style="color:#f44336; border-color:#f44336;">Clear All</button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Note: The HTML structure here uses the Feral Builder's toolbox/dropzone layout. We will hook up the Bear rotation steps via JS later. -->
+                                        <div class="rb-layout"
+                                            style="display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start;">
+                                            <div class="rb-toolbox" id="rbToolbox" style="width:220px; flex-shrink:0;">
+                                                <div class="gear-section-title" style="margin-top:0;">Skills (Drag)
+                                                </div>
+                                                <div class="rb-skills-grid" id="rbSkillsList"
+                                                    style="display:flex; flex-direction:column; gap:8px;">
+                                                    <!-- Filled by JS -->
+                                                </div>
+                                            </div>
+
+                                            <div class="rb-dropzone-container" style="flex:1; min-width:300px;">
+                                                <div class="gear-section-title" style="margin-top:0;">Priority List (Top
+                                                    to Bottom)</div>
+                                                <div class="rb-dropzone" id="rbDropzone"
+                                                    style="min-height:150px; background:rgba(0,0,0,0.2); border:1px dashed #555; border-radius:8px; padding:10px; display:flex; flex-direction:column; gap:10px;">
+                                                    <!-- Legacy bear builder fallback -->
+                                                    <div id="rotation_builder" class="rotation-builder"
+                                                        style="width:100%;"></div>
+                                                    <button class="btn-mini" onclick="addRotationStep()"
+                                                        style="width:100%; margin-top:10px;">+ Add Priority
+                                                        Step</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="action-area button-row">
+                            <button id="btn_run_sim" class="primary-btn"><span class="btn-icon">⚡</span> Run
+                                Simulation</button>
+                            <button id="btnWeights" class="secondary-btn"><span class="btn-icon">⚖️</span> Stat
+                                Weights</button>
+                        </div>
+
+                        <!-- Results Dashboard -->
+                         <div id="simPlaceholder" style="text-align:center; padding:50px 20px; color:var(--text-muted); font-size:1.1rem; border:1px dashed var(--border-color); border-radius:8px; margin-top:20px;">
+                            ⚙️ Run Simulation to generate charts and view detailed results...
+                        </div>
+
+                        <div id="resultsArea">
+                            <div id="deathBanner" class="hidden" style="background: rgba(229,57,53,0.15); border: 1px solid var(--rage-red); color: #fff; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
+                                ⚠️ <strong style="color:var(--rage-red);">DEATH WARNING:</strong> You died after <b id="deathTime"></b> seconds by <b id="deathType"></b> (<b id="deathDmg"></b> Damage).
+                            </div>
+                            <!-- Ergebnisse Header mit 5% / Median / 95% -->
+                            <div class="results-header">
+                                <div class="left-actions">
+                                    <h2>Results</h2>
+                                </div>
+                                <div class="center-toggles">
+                                    <div class="view-toggles">
+                                        <button class="view-btn" data-view="min">5%</button>
+                                        <button class="view-btn active" data-view="median">Median</button>
+                                        <button class="view-btn" data-view="max">95%</button>
+                                    </div>
+                                </div>
+                                <div class="right-actions"></div>
+                            </div>
+
+                            <!-- TPS & DPS Charts -->
+                            <div class="grid-container" style="margin-bottom:30px;">
+                                <div class="card">
+                                    <div class="sub-card-header"
+                                        style="text-align: center; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);">
+                                        <h3
+                                            style="font-size: 1.1rem; color: var(--text-color); margin: 0; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">
+                                            TPS Distribution</h3>
+                                    </div>
+                                    <div class="card-body" style="padding: 10px;">
+                                        <canvas id="tpsChart"
+                                            style="width: 100%; height: 160px; display: block;"></canvas>
+                                    </div>
+                                </div>
+                                <div class="card">
+                                    <div class="sub-card-header"
+                                        style="text-align: center; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);">
+                                        <h3
+                                            style="font-size: 1.1rem; color: var(--text-color); margin: 0; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">
+                                            DPS Distribution</h3>
+                                    </div>
+                                    <div class="card-body" style="padding: 10px;">
+                                        <canvas id="dpsChart"
+                                            style="width: 100%; height: 160px; display: block;"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="stats-grid">
+                                <div class="stat-box primary">
+                                    <h3>TPS (Threat)</h3>
+                                    <span id="res_tps" class="big-number">0.0</span>
+                                </div>
+                                <div class="stat-box survival">
+                                    <h3>EHP (Survival)</h3>
+                                    <span id="res_ehp" class="big-number">0</span>
+                                </div>
+                                <div class="stat-box">
+                                    <h3>DTPS (Dmg Taken)</h3>
+                                    <span id="res_dtps" class="med-number"
+                                        style="margin-top:15px; color: #ffb74d;">0.0</span>
+                                </div>
+                                <div class="stat-box">
+                                    <h3>DPS (Dmg Dealt)</h3>
+                                    <span id="res_dps" class="med-number" style="margin-top:15px;">0.0</span>
+                                </div>
+                            </div>
+
+                            <!-- Ability Statistics Table -->
+                            <div class="card full-width" style="margin-bottom: 30px;">
+                                <div class="card-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                                    <h2>📊 Ability Statistics (Selected Run)</h2>
+                                </div>
+                                <div class="card-body" style="padding: 0;">
+                                    <div class="table-wrapper">
+                                        <table class="result-table">
+                                            <thead>
+                                                <tr>
+                                                    <th class="text-left">Ability</th>
+                                                    <th class="text-right">Total Dmg</th>
+                                                    <th class="text-right">DPS</th>
+                                                    <th class="text-right">% of Dmg</th>
+                                                    <th class="text-right">Casts</th>
+                                                    <th class="text-right">Crit %</th>
+                                                    <th class="text-right">Glance %</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="abilityStatsBody"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 1. NEU: Attack & Mitigation Tables -->
+                            <div class="card full-width" style="margin-top: 20px; margin-bottom: 20px;">
+                                <div class="card-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                                    <h2>⚔️ Attack & Mitigation Tables</h2>
+                                </div>
+                                <div class="card-body">
+                                    <div style="display: flex; flex-direction: column; gap: 20px;">
+                                        <!-- Bear hits Boss -->
+                                        <div>
+                                            <h3
+                                                style="font-size:0.9rem; color:var(--text-muted); margin-bottom:10px; text-transform: uppercase;">
+                                                Bear attacks Boss (White Hits)</h3>
+                                            <div id="attackTableBody"></div>
+                                        </div>
+                                        <!-- Boss hits Bear -->
+                                        <div>
+                                            <h3
+                                                style="font-size:0.9rem; color:var(--text-muted); margin-bottom:10px; text-transform: uppercase;">
+                                                Boss attacks Bear</h3>
+                                            <div id="mitigationTableBody"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card full-width" style="margin-top: 20px; margin-bottom: 20px;">
+                                <div class="card-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                                    <h2>⚖️ Stat Weight Results</h2>
+                                </div>
+                                <div class="card-body">
+                                    <div id="weightResults" class="hidden"
+                                        style="margin-top: 20px; margin-bottom: 20px;"></div>
+                                </div>
+                            </div>
+
+
+                            <div id="combatLogSection"
+                                style="margin-top: 30px; border-top: 1px solid #333; padding-top: 20px;">
+                                <div class="results-header">
+                                    <h2>📜 Combat Log (Average Run)</h2>
+                                    <div class="log-actions">
+                                        <button class="btn-mini" onclick="prevLogPage()"> &lt; </button>
+                                        <span id="logPageLabel" style="font-size:0.8rem; padding:5px;">Page 1</span>
+                                        <button class="btn-mini" onclick="nextLogPage()"> &gt; </button>
+                                        <button onclick="downloadCSV()" class="btn-mini">💾 CSV</button>
+                                    </div>
+                                </div>
+                                <div class="log-container">
+                                    <table class="log-table">
+                                        <thead>
+                                            <tr id="logTableHeader">
+                                                <!-- Wird durch JS dynamisch gefüllt -->
+                                            </tr>
+                                        </thead>
+                                        <tbody id="logTableBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts (You'll inject Bear Tank JS logic here next) -->
+    <script src="js/01_globals.js"></script>
+    <script src="js/02_utils.js"></script>
+    <script src="js/03_gear.js"></script>
+    <script src="js/04_ui.js"></script>
+    <script src="js/05_engine.js"></script>
+    <script src="js/06_main.js"></script>
+
+</body>
+
+</html>
