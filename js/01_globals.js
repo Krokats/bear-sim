@@ -301,7 +301,7 @@ var GEAR_PRESETS = {
             "Trinket 1": 61816,  // Araxxna's Husk
             "Trinket 2": 60559,  // Hatereaver Cog
             "Main Hand": 20580,  // Hammer of Bestial Fury
-            "Off Hand": 22988,   // Almanac of Savagery
+            "Off Hand": 60431,   // Almanac of Savagery
             "Idol": 23198        // Idol of Brutality
         },
         enchants: { "Head": 0, "Neck": 0, "Shoulder": 0, "Back": 0, "Chest": 0, "Wrist": 0, "Hands": 0, "Waist": 0, "Legs": 0, "Feet": 0, "Finger 1": 0, "Finger 2": 0, "Trinket 1": 0, "Trinket 2": 0, "Main Hand": 0, "Off Hand": 0, "Idol": 0 }
@@ -327,7 +327,7 @@ var GEAR_PRESETS = {
             "Trinket 1": 60559,  // Hatereaver Cog
             "Trinket 2": 19406,  // Drake Fang Talisman
             "Main Hand": 20580,  // Hammer of Bestial Fury
-            "Off Hand": 22988,   // Almanac of Savagery
+            "Off Hand": 60431,   // Almanac of Savagery
             "Idol": 23198        // Idol of Brutality
         },
         enchants: { "Head": 0, "Neck": 0, "Shoulder": 0, "Back": 0, "Chest": 0, "Wrist": 0, "Hands": 0, "Waist": 0, "Legs": 0, "Feet": 0, "Finger 1": 0, "Finger 2": 0, "Trinket 1": 0, "Trinket 2": 0, "Main Hand": 0, "Off Hand": 0, "Idol": 0 }
@@ -349,7 +349,7 @@ var GEAR_PRESETS = {
             "Trinket 1": 61816,  // Araxxna's Husk
             "Trinket 2": 60559,  // Hatereaver Cog
             "Main Hand": 20580,  // Hammer of Bestial Fury
-            "Off Hand": 22988,   // Almanac of Savagery
+            "Off Hand": 60431,   // Almanac of Savagery
             "Idol": 23198        // Idol of Brutality
         },
         enchants: { "Head": 0, "Neck": 0, "Shoulder": 0, "Back": 0, "Chest": 0, "Wrist": 0, "Hands": 0, "Waist": 0, "Legs": 0, "Feet": 0, "Finger 1": 0, "Finger 2": 0, "Trinket 1": 0, "Trinket 2": 0, "Main Hand": 0, "Off Hand": 0, "Idol": 0 }
@@ -375,7 +375,7 @@ var GEAR_PRESETS = {
             "Trinket 1": 19406,  // Drake Fang Talisman
             "Trinket 2": 61194,  // The Heart of Dreams
             "Main Hand": 20580,  // Hammer of Bestial Fury
-            "Off Hand": 22988,   // Almanac of Savagery
+            "Off Hand": 60431,   // Almanac of Savagery
             "Idol": 23198        // Idol of Brutality
         },
         enchants: { "Head": 0, "Neck": 0, "Shoulder": 0, "Back": 0, "Chest": 0, "Wrist": 0, "Hands": 0, "Waist": 0, "Legs": 0, "Feet": 0, "Finger 1": 0, "Finger 2": 0, "Trinket 1": 0, "Trinket 2": 0, "Main Hand": 0, "Off Hand": 0, "Idol": 0 }
@@ -397,7 +397,7 @@ var GEAR_PRESETS = {
             "Trinket 1": 61816,  // Araxxna's Husk
             "Trinket 2": 60559,  // Hatereaver Cog
             "Main Hand": 20580,  // Hammer of Bestial Fury
-            "Off Hand": 22988,   // Almanac of Savagery
+            "Off Hand": 60431,   // Almanac of Savagery
             "Idol": 23198        // Idol of Brutality
         },
         enchants: { "Head": 0, "Neck": 0, "Shoulder": 0, "Back": 0, "Chest": 0, "Wrist": 0, "Hands": 0, "Waist": 0, "Legs": 0, "Feet": 0, "Finger 1": 0, "Finger 2": 0, "Trinket 1": 0, "Trinket 2": 0, "Main Hand": 0, "Off Hand": 0, "Idol": 0 }
@@ -423,7 +423,7 @@ var GEAR_PRESETS = {
             "Trinket 1": 60559,  // Hatereaver Cog
             "Trinket 2": 61194,  // The Heart of Dreams
             "Main Hand": 21268,  // Blessed Qiraji War Hammer
-            "Off Hand": 22988,   // Almanac of Savagery
+            "Off Hand": 60431,   // Almanac of Savagery
             "Idol": 23198        // Idol of Brutality
         },
         enchants: { "Head": 0, "Neck": 0, "Shoulder": 0, "Back": 0, "Chest": 0, "Wrist": 0, "Hands": 0, "Waist": 0, "Legs": 0, "Feet": 0, "Finger 1": 0, "Finger 2": 0, "Trinket 1": 0, "Trinket 2": 0, "Main Hand": 0, "Off Hand": 0, "Idol": 0 }
@@ -445,7 +445,7 @@ var GEAR_PRESETS = {
             "Trinket 1": 61816,  // Araxxna's Husk
             "Trinket 2": 60559,  // Hatereaver Cog
             "Main Hand": 21268,  // Blessed Qiraji War Hammer
-            "Off Hand": 22988,   // Almanac of Savagery
+            "Off Hand": 60431,   // Almanac of Savagery
             "Idol": 23198        // Idol of Brutality
         },
         enchants: { "Head": 0, "Neck": 0, "Shoulder": 0, "Back": 0, "Chest": 0, "Wrist": 0, "Hands": 0, "Waist": 0, "Legs": 0, "Feet": 0, "Finger 1": 0, "Finger 2": 0, "Trinket 1": 0, "Trinket 2": 0, "Main Hand": 0, "Off Hand": 0, "Idol": 0 }
