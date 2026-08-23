@@ -14,7 +14,7 @@ function getDbSlots(uiSlotName) {
     if (uiSlotName.includes("Finger") || uiSlotName.includes("Ring")) return ["Finger"];
     if (uiSlotName.includes("Trinket")) return ["Trinket"];
     if (uiSlotName === "Main Hand" || uiSlotName === "Weapon") return ["One-hand", "Two-hand", "Main Hand"];
-    if (uiSlotName === "Off Hand") return ["Held In Off-Hand", "Shield"];
+    if (uiSlotName === "Off Hand") return ["Held In Off-Hand", "Shield", "One-hand"];
     if (uiSlotName === "Idol") return ["Relic", "Idol"];
     return [uiSlotName]; // Fallback für Head, Neck, Chest etc.
 }
