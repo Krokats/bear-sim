@@ -921,3 +921,50 @@ input:checked + .slider::before { transform: translateX(16px); background-color:
     color: var(--rage-red);
     background: rgba(229, 57, 53, 0.15);
 }
+
+/* Other Simulations Modal - Neues 2x2 Grid (Groß) */
+.sim-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 30px; /* Größerer Abstand zwischen den Bildern */
+}
+
+.sim-promo-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end; /* Text unten anordnen */
+    align-items: center;
+    height: 300px; /* Karten deutlich größer gemacht */
+    border-radius: 12px;
+    text-decoration: none;
+    background-size: cover;
+    background-position: center;
+    border: 2px solid transparent;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+}
+
+.sim-promo-card:hover {
+    transform: scale(1.03); /* Leichter Zoom beim Hover */
+    border-color: var(--rage-red);
+    box-shadow: 0 15px 40px rgba(185, 14, 8, 0.5);
+}
+
+.sim-promo-card.active {
+    border-color: var(--rage-red);
+    pointer-events: none;
+    opacity: 0.8;
+}
+
+/* Der Text unten im Bild (falls du ihn komplett weg haben willst, setze hier display: none;) */
+.sim-promo-card .card-label {
+    width: 100%;
+    padding: 15px;
+    background: rgba(0,0,0,0.7); /* Halbtransparenter Balken nur hinter dem Text */
+    color: white;
+    text-align: center;
+    font-family: 'Cinzel', serif;
+    font-size: 1.4rem;
+    text-shadow: 1px 1px 3px black;
+}

@@ -473,37 +473,6 @@ function populateGearPresets() {
     }
 }
 
-function loadBiSPreset() {
-    var sel = document.getElementById("bis_preset_select");
-    if (!sel || !sel.value) {
-        if(typeof showToast === 'function') showToast("Please select a preset first.");
-        return;
-    }
-    
-    var val = sel.value;
-    var presetData = null;
-
-    // Entscheide, aus welcher Quelle geladen wird
-    if (val.startsWith("def_")) {
-        var key = val.substring(4);
-        presetData = GEAR_PRESETS[key];
-    } else if (val.startsWith("cus_")) {
-        var key = val.substring(4);
-        var custom = JSON.parse(localStorage.getItem("bear_sim_custom_gear") || "{}");
-        presetData = custom[key];
-    }
-
-    if (presetData) {
-        // Klone die Daten sicher
-        GEAR_SELECTION = JSON.parse(JSON.stringify(presetData.gear || {}));
-        ENCHANT_SELECTION = JSON.parse(JSON.stringify(presetData.enchants || {}));
-        
-        // UI neubauen und Stats updaten
-        if(typeof initGearPlannerUI === 'function') initGearPlannerUI();
-        if(typeof showToast === 'function') showToast("Loaded Preset!");
-        if(typeof saveCurrentState === 'function') saveCurrentState();
-    }
-}
 
 function saveGearPreset() {
     var safeName = prompt("Enter a name for your custom gear preset:");
