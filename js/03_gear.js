@@ -290,9 +290,9 @@ function calculateGearStats() {
     var finalStr = Math.floor((bonus.str + race.str) * kingsMult);
     var finalAgi = Math.floor((bonus.agi + race.agi) * kingsMult); 
     
-    var flex = document.getElementById("tal_flex") ? document.getElementById("tal_flex").value : "swiftness";
 
-    var hotwMult = 1.20; // Heart of the Wild 5/5
+    var t = typeof TALENT_CONFIG !== 'undefined' ? TALENT_CONFIG : {};
+    var hotwMult = 1.0 + ((t.heartOfTheWild || 0) * 0.04); // 4/8/12/16/20%
     var finalSta = Math.floor((bonus.sta + race.sta) * kingsMult * hotwMult);
 
     var taurenMod = raceName === "Tauren" ? 1.05 : 1.0;
@@ -300,20 +300,24 @@ function calculateGearStats() {
     if (setCounts["Dreamwalker Harness"] >= 6) direBearFlatHP = Math.floor(direBearFlatHP * 1.25);
     var finalHP = Math.floor(race.baseHp + (((finalSta - race.sta) * 10) + direBearFlatHP) * taurenMod) + flatHP;
 
-    var armorMultiplier = 4.784; // 4.6 Base + 0.184 (Thick Hide 3/3)
+    var thVal = [0, 0.03, 0.06, 0.10][t.thickHide || 0] || 0;
+    var armorMultiplier = 4.6 * (1.0 + thVal); // 4.6 Base + Thick Hide
     var finalArmor = Math.floor((bonus.armor * armorMultiplier) + (finalAgi * 2)) + flatArmor;
     
-    var finalAP = Math.floor((160 + (finalStr * 2) + bonus.attackPower + 180) * 1.10); // Predatory Strikes 3/3 (+10%)
+    var arr3_6_10 = [0, 0.03, 0.06, 0.10];
+    var predMod = 1.0 + (arr3_6_10[t.predatoryStrikes || 0] || 0);
+    var finalAP = Math.floor((160 + (finalStr * 2) + bonus.attackPower + 180) * predMod);
 
     var finalDefense = 300 + bonus.defense;
-    var flexDodge = (flex === "swiftness") ? 4.0 : 0.0;
-    var finalDodge = race.dodge + (finalAgi / 20.0) + ((finalDefense - 300) * 0.04) + bonus.dodge + flexDodge;
+    var swiftnessDodge = (t.feralSwiftness || 0) * 2.0; // 2/4% Dodge
+    var finalDodge = race.dodge + (finalAgi / 20.0) + ((finalDefense - 300) * 0.04) + bonus.dodge + swiftnessDodge;
     
-    // Sharpened Claws (+6%) + LotP (+3%)
-    var finalCrit = race.crit + (finalAgi / 20.0) + bonus.crit + 9.0; 
+    var sharpClawsCrit = (t.sharpenedClaws || 0) * 2.0; // 2/4/6%
+    var lotpCrit = (t.leaderOfThePack || 0) * 3.0; // 3%
+    var finalCrit = race.crit + (finalAgi / 20.0) + bonus.crit + sharpClawsCrit + lotpCrit; 
     
-    // Natural Weapons 3/3 gibt in Turtle WoW +3% Hit
-    var finalHit = bonus.hit + 3.0;
+    // Natural Weapons (1/2/3% Hit in Turtle WoW)
+    var finalHit = bonus.hit + (t.naturalWeapons || 0);
     var finalHaste = bonus.attackSpeed || 0;
     var finalArp = bonus.armorPen || 0;
 

@@ -642,6 +642,19 @@ function switchSim(index, skipSave) {
         if(resArea) resArea.classList.remove("hidden");
         if (typeof renderResults === 'function') renderResults();
     }
+    // NEU: Stat Weights Container beim Wechseln der Sim wiederherstellen
+    var wRes = document.getElementById("weightResults");
+    if (wRes) {
+        if (SIM_DATA.weightResultsHTML) {
+            wRes.innerHTML = SIM_DATA.weightResultsHTML;
+            wRes.classList.remove("hidden");
+            window.latestSimWeights = SIM_DATA.latestSimWeights; // Stellt sicher, dass "Apply" den richtigen Wert nimmt
+        } else {
+            wRes.innerHTML = "";
+            wRes.classList.add("hidden");
+            window.latestSimWeights = null;
+        }
+    }
 }
 
 function deleteSim(index) {
@@ -886,6 +899,11 @@ function getCurrentConfigFromUI() {
     if (typeof CUSTOM_ROTATION !== 'undefined') {
         cfg.custom_rotation = JSON.parse(JSON.stringify(CUSTOM_ROTATION));
     }
+
+    if (typeof TALENT_CONFIG !== 'undefined') {
+        cfg.talents = JSON.parse(JSON.stringify(TALENT_CONFIG));
+    }
+
     return cfg;
 }
 
@@ -931,6 +949,32 @@ function applyConfigToUI(cfg, gearData, enchantData) {
         if (typeof renderRotationBuilder === 'function') renderRotationBuilder();
 
         if (typeof initGearPlannerUI === 'function') initGearPlannerUI();
+
+        if (typeof TALENT_CONFIG !== 'undefined') {
+            var hasTalents = false;
+            if (cfg.talents) {
+                // Prüfen ob überhaupt Punkte vergeben sind
+                for (var k in cfg.talents) {
+                    if (cfg.talents[k] > 0) hasTalents = true;
+                }
+            }
+
+            if (hasTalents) {
+                for (var key in TALENT_CONFIG) {
+                    TALENT_CONFIG[key] = cfg.talents.hasOwnProperty(key) ? cfg.talents[key] : 0;
+                }
+                var tpSel = document.getElementById("talent_preset_select");
+                if (tpSel) tpSel.value = ""; 
+            } else {
+                // DEFAULT PRESET LADEN, falls komplett leer!
+                if (typeof TALENT_PRESETS !== 'undefined' && TALENT_PRESETS["Survival Tank (11/35/5)"]) {
+                    TALENT_CONFIG = JSON.parse(JSON.stringify(TALENT_PRESETS["Survival Tank (11/35/5)"]));
+                    var tpSel = document.getElementById("talent_preset_select");
+                    if (tpSel) tpSel.value = "Survival Tank (11/35/5)";
+                }
+            }
+        }
+        if (typeof renderTalentTree === 'function') renderTalentTree();
         
     } catch (e) {
         console.error("Error applying config:", e);
@@ -952,6 +996,14 @@ function getSimInputs() {
     conf.gear = JSON.parse(JSON.stringify(GEAR_SELECTION));
     conf.enchants = JSON.parse(JSON.stringify(ENCHANT_SELECTION));
     conf.rotation = JSON.parse(JSON.stringify(CUSTOM_ROTATION));
+    
+    // NEU: Talente in die Config übergeben
+    if (typeof TALENT_CONFIG !== 'undefined') {
+        conf.talents = JSON.parse(JSON.stringify(TALENT_CONFIG));
+    } else {
+        conf.talents = {};
+    }
+    
     return conf;
 }
 
@@ -959,10 +1011,15 @@ function getSimInputs() {
 // UI INITIALIZATION
 // ============================================================================
 function setupUIListeners() {
-    var statWeightsInputs = ["weight_str", "weight_agi", "weight_sta", "weight_crit", "weight_hit", "weight_dodge", "weight_ap"];
+    var statWeightsInputs = ["weight_str", "weight_agi", "weight_sta", "weight_crit", "weight_hit", "weight_dodge", "weight_ap", "weight_haste", "weight_arp", "weight_armor", "weight_def"];
     statWeightsInputs.forEach(id => {
         var el = document.getElementById(id);
-        if(el) el.addEventListener('change', recalcItemScores);
+        if(el) {
+            el.addEventListener('change', function() {
+                if (typeof recalcItemScores === 'function') recalcItemScores();
+                saveCurrentState(); // Sofortiges Speichern beim manuellen Ändern!
+            });
+        }
     });
 
     // --- NEU: Event-Listener für Talente, Consumables & Buffs ---
@@ -1045,6 +1102,8 @@ function setupUIListeners() {
     populatePresetDropdown();
     renderRotationBuilder();
     if(typeof populateGearPresets === 'function') populateGearPresets();
+    if (typeof renderTalentPresetDropdown === 'function') renderTalentPresetDropdown();
+    if (typeof renderTalentTree === 'function') renderTalentTree();
 }
 
 // ============================================================================
@@ -1298,8 +1357,35 @@ function renderChart(canvasId, dataArr, baseColor, label, highlightVals, activeV
         chartInstances[canvasId].destroy();
     }
 
-    var min = Math.min(...dataArr);
-    var max = Math.max(...dataArr);
+    var globalMin = Infinity;
+    var globalMax = -Infinity;
+    var dataKey = (label === "TPS") ? "tps_arr" : "dps_arr";
+    
+    // Globale Skala über ALLE existierenden Simulationen ermitteln
+    SIM_LIST.forEach(function(sim) {
+        if (sim.results && sim.results.raw && sim.results.raw[dataKey]) {
+            var sMin = Math.min(...sim.results.raw[dataKey]);
+            var sMax = Math.max(...sim.results.raw[dataKey]);
+            if (sMin < globalMin) globalMin = sMin;
+            if (sMax > globalMax) globalMax = sMax;
+        }
+    });
+    
+    // Fallback, falls etwas schiefgeht
+    if (globalMin === Infinity || globalMax === -Infinity) {
+        globalMin = Math.min(...dataArr);
+        globalMax = Math.max(...dataArr);
+    }
+    
+    var min = globalMin;
+    var max = globalMax;
+    
+    // Kleiner Puffer von 5%, damit die Balken nicht direkt am Rand kleben
+    var range = max - min;
+    if (range === 0) range = 10;
+    min = Math.max(0, min - (range * 0.05));
+    max = max + (range * 0.05);
+
     var buckets = 40;
     var step = (max - min) / buckets;
     if (step === 0) step = 1;
@@ -1309,6 +1395,7 @@ function renderChart(canvasId, dataArr, baseColor, label, highlightVals, activeV
     dataArr.forEach(val => {
         var b = Math.floor((val - min) / step);
         if (b >= buckets) b = buckets - 1;
+        if (b < 0) b = 0; // Verhindert Abstürze durch Puffer
         counts[b]++;
     });
     
@@ -1646,10 +1733,13 @@ function updateDamageScaling() {
 
     const ap = getVal("stat_ap");
 
-    // Alle Talente fest auf 3/3 bzw. 5/5
-    const tNatWep = 1.10; 
-    const tPredStrikes = 1.20; 
-    const tFeralInstinct = 1.15;
+    const t = typeof TALENT_CONFIG !== 'undefined' ? TALENT_CONFIG : {};
+    const arr3_6_10 = [0, 0.03, 0.06, 0.10];
+    const arr7_14_20 = [0, 0.07, 0.14, 0.20];
+    
+    const tNatWep = 1.0 + (arr3_6_10[t.naturalWeapons || 0] || 0); 
+    const tPredStrikes = 1.0 + (arr7_14_20[t.predatoryStrikes || 0] || 0); 
+    const tFeralInstinct = 1.0 + ((t.feralInstinct || 0) * 0.05);
 
     // Basis-Schaden aus Info[cite: 10]
     const avgBase = 209; // Auto-Attack Base Range (178 - 241)

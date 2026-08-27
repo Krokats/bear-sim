@@ -81,7 +81,7 @@ function runSingleSim(config, captureLog) {
     function getHasteMult() {
         var hasteMult = 1.0;
         if (config.stat_haste > 0) hasteMult *= (1 + (config.stat_haste / 100));
-        if (state.buffs.bloodFrenzyAS > 0) hasteMult *= 1.20;
+        if (state.buffs.bloodFrenzyAS > 0) hasteMult *= (1.0 + ((config.talents.bloodFrenzy || 0) * 0.10)); // 10/20%
         if (state.buffs.spider > 0) hasteMult *= 1.20; 
         if (config.consum_quickness && state.time <= 30.0) hasteMult *= 1.05;
         return hasteMult;
@@ -163,7 +163,12 @@ function runSingleSim(config, captureLog) {
 
     // --- STATE INITIALIZATION ---
     // Furor 5/5 gibt 10 Wut, Gift of Ferocity gibt 5 Wut
-    var initialRage = 10;
+    // Furor (20/40/60/80/100% Chance auf 10 Wut beim Shapeshift/Kampfbeginn)
+    var initialRage = 0;
+    if (rngPlayer.nextFloat() * 100 < ((config.talents.furor || 0) * 20.0)) {
+        initialRage += 10;
+    }
+
     if (config.hasGiftOfFerocity || config.gear_gift_of_ferocity) initialRage += 5;
 
     var state = {
@@ -287,10 +292,13 @@ function runSingleSim(config, captureLog) {
     var timeStep = 0.05; // 50ms Engine Tick
 
     // --- TALENTS & MODIFIERS ---
-    var feralInstinctMod = 1.15; 
-    var natWepMod = 1.10; 
-    var predStrikeDmgMod = 1.20; 
-    var ferocityCostReduction = 5;
+    var arr3_6_10 = [0, 0.03, 0.06, 0.10];
+    var arr7_14_20 = [0, 0.07, 0.14, 0.20];
+
+    var feralInstinctMod = 1.0 + ((config.talents.feralInstinct || 0) * 0.05); 
+    var natWepMod = 1.0 + (arr3_6_10[config.talents.naturalWeapons || 0] || 0); 
+    var predStrikeDmgMod = 1.0 + (arr7_14_20[config.talents.predatoryStrikes || 0] || 0); 
+    var ferocityCostReduction = (config.talents.ferocity || 0);
 
     // Base Threat Multipliers (multiplied by Feral Instinct)
     var threatMods = {
@@ -340,7 +348,8 @@ function runSingleSim(config, captureLog) {
         
         // --- 1. HANDLE BUFFS & TICKS ---
         if (state.abTicksLeft > 0 && state.time >= state.nextABTick) {
-            state.rage = Math.min(100, state.rage + 4); // TURTLE KORREKTUR: 4 Wut pro Tick
+            var abRage = (config.talents.ancientBrutality || 0) * 2;
+            state.rage = Math.min(100, state.rage + abRage);
             state.abTicksLeft--;
             state.nextABTick = state.time + 1.0; 
             logAction(state.time, "Tick", "Ancient Brutality", "Tick", 0, 0, 0, 4, "4 Rage");
@@ -379,7 +388,9 @@ function runSingleSim(config, captureLog) {
             var roll = rngBoss.nextFloat() * 100;
             var damage = baseDamage * (0.9 + rngBoss.nextFloat() * 0.2); 
             
-            var demoRoarMod = (config.tal_flex === "aggression") ? 0.884 : 0.90;
+            // 10% Base-Reduction * (1 + 8% pro Talentpunkt)
+            var demoEffect = 0.10 * (1.0 + (config.talents.feralAggression || 0) * 0.08);
+            var demoRoarMod = 1.0 - demoEffect;
             if (state.debuffs.demoralizingRoar > 0) damage *= demoRoarMod;
 
             if (!isAbility) state.counters.boss.swings++; 
@@ -593,11 +604,12 @@ function runSingleSim(config, captureLog) {
                 }
                 else if (step.skill === "Enrage" && state.buffs.enrage <= 0) {
                     state.buffs.enrage = 10.0;
-                    // Blood Frenzy 2/2 ist immer aktiv
-                    state.rage = Math.min(100, state.rage + 10);
-                        
+                    var bfRage = (config.talents.bloodFrenzy || 0) * 5; // 5/10 Rage
+                    var bfDur = (config.talents.bloodFrenzy || 0) * 9.0; // 9/18 Sec
+                    
+                    state.rage = Math.min(100, state.rage + bfRage);
                     var oldFullSwing = getCurrentSwingTime();
-                    state.buffs.bloodFrenzyAS = 18.0; 
+                    if (bfDur > 0) state.buffs.bloodFrenzyAS = bfDur;
                     var newFullSwing = getCurrentSwingTime();
                         
                     var ratio = state.playerSwingTimer / oldFullSwing; 
@@ -852,7 +864,10 @@ function resolvePlayerAttack(baseDmg, skillName, threatMod, miss, dodge, parry, 
         }
         
         // Primal Fury (Immer 2/2 -> 5 Wut)
-        if (isCrit) rageGained += 5; 
+        var primalFuryChance = (config.talents.primalFury || 0) * 50.0;
+        if (isCrit && rng.nextFloat() * 100 < primalFuryChance) {
+            rageGained += 5; 
+        }
         
         state.rage = Math.min(100, state.rage + rageGained);
         var netRageChange = rageGained - rageCost;
@@ -860,15 +875,14 @@ function resolvePlayerAttack(baseDmg, skillName, threatMod, miss, dodge, parry, 
         var hitType = isGlancing ? "GLANCE" : (isCrit ? "CRIT" : "HIT");
         logAction(state.time, "Cast", skillName, hitType, finalDmg, threatGenerated, 0, netRageChange, ccMsg);
 
-        // Omen of Clarity (Immer 1/1 -> 10% Chance)
-        if (rng.nextFloat() < 0.10) {
+        if ((config.talents.omenOfClarity || 0) > 0 && rng.nextFloat() < 0.10) {
             state.buffs.clearcasting = true;
             logAction(state.time, "Proc", "Omen of Clarity", "Clearcasting", 0, 0, 0, 0, "Next ability is free.");
         }
 
-        // CARNAGE (Immer 2/2 -> 5% Heal)
-        if (["Maul", "Swipe", "Savage Bite"].includes(skillName)) {
-            var healAmount = Math.floor(finalDmg * 0.05);
+        var carnagePct = (config.talents.carnage || 0) * 0.05;
+        if (carnagePct > 0 && ["Maul", "Swipe", "Savage Bite"].includes(skillName)) {
+            var healAmount = Math.floor(finalDmg * carnagePct);
             if (state.playerDebuffs.mortalStrike > 0) healAmount = Math.floor(healAmount * 0.5); // NEU: MS Debuff
 
             if (healAmount > 0) {
@@ -1130,11 +1144,16 @@ function runStatWeights() {
         
         var cfg = JSON.parse(JSON.stringify(baseConfig));
         
-        // Bären-Modifikatoren anwenden (Hardcoded für den permanenten 11/35/5 Build)
-        var predMod = 1.10; // Predatory Strikes 3/3 (+10%)
-        var hotwMod = 1.20; // Heart of the Wild 5/5 (+20%)
+        // Bären-Modifikatoren anwenden (Dynamisch nach Talentbaum)
+        var t = cfg.talents || {};
+        var arr3_6_10 = [0, 0.03, 0.06, 0.10];
+        
+        var predMod = 1.0 + (arr3_6_10[t.predatoryStrikes || 0] || 0);
+        var hotwMod = 1.0 + ((t.heartOfTheWild || 0) * 0.04);
         var taurenMod = (cfg.char_race === "Tauren") ? 1.05 : 1.0;
-        var thickHideMod = 4.784; // 4.6 Base + 0.184 von Thick Hide 3/3
+        
+        var thVal = [0, 0.03, 0.06, 0.10][t.thickHide || 0] || 0;
+        var thickHideMod = 4.6 * (1.0 + thVal); // Base Dire Bear Form (4.6) * Thick Hide
         var kingsMod = cfg.buff_kings ? 1.10 : 1.0; // NEU: Blessing of Kings
 
         for (var k in scen.mod) {
@@ -1464,6 +1483,11 @@ function finalizeStatWeights(deltas, scenarios) {
         wRes.classList.remove("hidden");
         wRes.scrollIntoView({behavior: "smooth"});
     }
+    // NEU: Speichere die Ergebnisse an die aktive Simulation
+    if (SIM_LIST[ACTIVE_SIM_INDEX]) {
+        SIM_LIST[ACTIVE_SIM_INDEX].weightResultsHTML = html;
+        SIM_LIST[ACTIVE_SIM_INDEX].latestSimWeights = window.latestSimWeights;
+    }
 }
 
 // Globale Helfer-Funktion zum Übertragen der Werte in den Gear-Planner
@@ -1490,9 +1514,10 @@ function applySimulatedWeights() {
     if(document.getElementById("weight_def")) document.getElementById("weight_def").value = w.def.toFixed(2);
     if(document.getElementById("weight_dodge")) document.getElementById("weight_dodge").value = w.dodge.toFixed(2);
     
-    // Ein Event auslösen, falls deine UI das Neu-Berechnen des Gear-Scores erzwingt (onchange trigger)
+    // Ein Event auslösen und den Auto-Save erzwingen
     if(typeof recalcItemScores === "function") {
         recalcItemScores();
+        if(typeof saveCurrentState === "function") saveCurrentState(); // ZWINGEND speichern!
         showToast("Weights applied to Gear Planner!");
     } else {
         alert("Weights applied! Please recalculate gear scores.");

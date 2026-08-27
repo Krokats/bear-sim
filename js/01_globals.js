@@ -94,8 +94,6 @@ var CONFIG_IDS = [
     // Target Debuffs
     "debuff_major_armor", "debuff_ff", "debuff_cor", "debuff_eskhandar",
     
-    // Bear Talents (Flex choice)
-    "tal_flex",
     
     // Consumables (Dropdowns)
     "consum_weapon", "consum_zg", "consum_blasted", 

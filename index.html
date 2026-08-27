@@ -375,7 +375,46 @@
                         <!-- Collapsible Configuration Grid -->
                         <div class="grid-container">
 
-                            <!-- Buffs & Consumables -->
+                            <!-- Talent Tree -->
+                            <div class="card full-width">
+                                <div class="card-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                                    <h2>🌳 Talent Tree <span id="talentCounterText" style="font-size:0.8rem; font-weight:normal; margin-left:15px; color:#aaa;"></span></h2>
+                                </div>
+                                <div class="card-body">
+                                    <!-- Preset Controls -->
+                                    <div style="display:flex; justify-content:space-between; margin-bottom:15px; align-items:center; flex-wrap: wrap; gap: 10px;">
+                                        <div style="display:flex; gap:10px; align-items:center;">
+                                            <div class="select-wrapper">
+                                                <select id="talent_preset_select" style="padding:6px; min-width: 150px;"></select>
+                                            </div>
+                                            <button class="btn-mini" onclick="loadTalentPreset()">Load</button>
+                                            <button class="btn-mini" style="color:#a5d6a7; border-color:#a5d6a7;" onclick="saveTalentPreset()">Save</button>
+                                            <button class="btn-mini" style="color:#f44336; border-color:#f44336;" onclick="deleteTalentPreset()">Del</button>
+                                        </div>
+                                        <button class="btn-mini" style="color:#f44336; border-color:#f44336;" onclick="clearTalents()">Reset Talents</button>
+                                    </div>
+
+                                    <!-- Talent Grids -->
+                                    <div style="display: flex; gap: 20px; overflow-x: auto; padding-bottom:10px; justify-content: center;">
+                                        <!-- Balance -->
+                                        <div style="min-width: 250px;">
+                                            <h3 id="treeTitleBalance" style="text-align:center; color:#90caf9; margin-bottom:10px; font-size:1rem;">Balance</h3>
+                                            <div id="talentGridBalance" style="display:grid; grid-template-columns: repeat(4, 50px); grid-template-rows: repeat(7, 50px); gap: 10px; background: rgba(0,0,0,0.2); padding:15px; border-radius:8px; border: 1px solid var(--border-color);"></div>
+                                        </div>
+                                        <!-- Feral -->
+                                        <div style="min-width: 250px;">
+                                            <h3 id="treeTitleFeral" style="text-align:center; color:#ffb74d; margin-bottom:10px; font-size:1rem;">Feral</h3>
+                                            <div id="talentGridFeral" style="display:grid; grid-template-columns: repeat(4, 50px); grid-template-rows: repeat(7, 50px); gap: 10px; background: rgba(0,0,0,0.2); padding:15px; border-radius:8px; border: 1px solid var(--border-color);"></div>
+                                        </div>
+                                        <!-- Resto -->
+                                        <div style="min-width: 250px;">
+                                            <h3 id="treeTitleResto" style="text-align:center; color:#a5d6a7; margin-bottom:10px; font-size:1rem;">Restoration</h3>
+                                            <div id="talentGridResto" style="display:grid; grid-template-columns: repeat(4, 50px); grid-template-rows: repeat(7, 50px); gap: 10px; background: rgba(0,0,0,0.2); padding:15px; border-radius:8px; border: 1px solid var(--border-color);"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Buffs & Consumables -->
                             <div class="card full-width collapsed">
                                 <div class="card-header" onclick="this.parentElement.classList.toggle('collapsed')">
@@ -1098,7 +1137,7 @@
     <script src="js/04_ui.js"></script>
     <script src="js/05_engine.js"></script>
     <script src="js/06_main.js"></script>
-
+    <script src="js/talent_tree.js"></script>
 </body>
 
 </html>
