@@ -638,12 +638,11 @@ function runSingleSim(config, captureLog) {
                     }
                 }
                 else if (step.skill === "Potion" && state.cooldowns.potion <= 0) {
-                    if (config.consum_mighty_rage) {
-                        var rageGain = 45 + rngPlayer.nextFloat() * 30;
-                        state.rage = Math.min(100, state.rage + rageGain);
-                        state.buffs.mightyRage = 20.0; state.cooldowns.potion = 120.0;
-                        logAction(state.time, "Buff", "Mighty Rage Potion", "Drank", 0, 0, 0, Math.floor(rageGain), "+60 Str");
-                    }
+                    var rageGain = 45 + rngPlayer.nextFloat() * 30;
+                    state.rage = Math.min(100, state.rage + rageGain);
+                    state.buffs.mightyRage = 20.0; 
+                    state.cooldowns.potion = 120.0;
+                    logAction(state.time, "Buff", "Mighty Rage Potion", "Drank", 0, 0, 0, Math.floor(rageGain), "+60 Str");
                 }
 
                 // --- GCD ABILITIES (Blockieren sich gegenseitig) ---
@@ -942,6 +941,36 @@ function resolvePlayerAttack(baseDmg, skillName, threatMod, miss, dodge, parry, 
         }
     }
 
+    // Hilfsfunktion zur Behandlung von Fehlversuchen (Rage Refund)
+    function handleAvoidance(avoidType) {
+        var refund = 0;
+        if (!wasClearcast && rageCost > 0) {
+            if (skillName === "Maul") refund = rageCost; // 100% Refund, da Next-Melee
+            else if (skillName !== "Auto Attack" && skillName !== "Extra Attack") refund = Math.floor(rageCost * 0.8); // 80% Refund für Yellow Hits
+        }
+        
+        if (refund > 0) {
+            state.rage = Math.min(100, state.rage + refund);
+        }
+        
+        var netRage = refund - rageCost;
+        var infoStr = wasClearcast ? "Clearcast!" : (refund > 0 ? "Refunded " + refund + " Rage" : "");
+
+        if (avoidType === "MISS") {
+            state.abilityStats[skillName].misses++;
+            if (isWhiteAttack) state.counters.bearWhite.misses++;
+        } else if (avoidType === "DODGED") {
+            state.abilityStats[skillName].dodges++;
+            if (isWhiteAttack) state.counters.bearWhite.dodges++;
+        } else if (avoidType === "PARRIED") {
+            state.abilityStats[skillName].parries++;
+            if (isWhiteAttack) state.counters.bearWhite.parries++;
+            triggerBossParryHaste();
+        }
+        
+        logAction(state.time, "Avoidance", skillName, avoidType, 0, 0, 0, netRage, infoStr);
+    }
+
     if (isWhiteAttack) {
         // ==========================================
         // 1-ROLL SYSTEM (Vanilla Auto Attacks)
@@ -956,18 +985,11 @@ function resolvePlayerAttack(baseDmg, skillName, threatMod, miss, dodge, parry, 
         state.counters.bearWhite.swings++;
         
         if (roll < chanceMiss) {
-            state.counters.bearWhite.misses++;
-            state.abilityStats[skillName].misses++;
-            logAction(state.time, "Avoidance", skillName, "MISS", 0, 0, 0, -rageCost, ccMsg);
+            handleAvoidance("MISS");
         } else if (roll < chanceDodge) {
-            state.counters.bearWhite.dodges++;
-            state.abilityStats[skillName].dodges++;
-            logAction(state.time, "Avoidance", skillName, "DODGED", 0, 0, 0, -rageCost, ccMsg);
+            handleAvoidance("DODGED");
         } else if (roll < chanceParry) {
-            state.counters.bearWhite.parries++;
-            state.abilityStats[skillName].parries++;
-            logAction(state.time, "Avoidance", skillName, "PARRIED", 0, 0, 0, -rageCost, ccMsg);
-            triggerBossParryHaste();
+            handleAvoidance("PARRIED");
         } else if (roll < chanceGlancing) {
             state.counters.bearWhite.glances++;
             applySuccessfulHit(false, true);
@@ -987,15 +1009,11 @@ function resolvePlayerAttack(baseDmg, skillName, threatMod, miss, dodge, parry, 
         var chanceParry = chanceDodge + parry;
 
         if (roll < chanceMiss) {
-            state.abilityStats[skillName].misses++;
-            logAction(state.time, "Avoidance", skillName, "MISS", 0, 0, 0, -rageCost, ccMsg);
+            handleAvoidance("MISS");
         } else if (roll < chanceDodge) {
-            state.abilityStats[skillName].dodges++;
-            logAction(state.time, "Avoidance", skillName, "DODGED", 0, 0, 0, -rageCost, ccMsg);
+            handleAvoidance("DODGED");
         } else if (roll < chanceParry) {
-            state.abilityStats[skillName].parries++;
-            logAction(state.time, "Avoidance", skillName, "PARRIED", 0, 0, 0, -rageCost, ccMsg);
-            triggerBossParryHaste();
+            handleAvoidance("PARRIED");
         } else {
             var roll2 = rng.nextFloat() * 100;
             var isCrit = (roll2 < crit);
