@@ -1473,6 +1473,7 @@ function renderChart(canvasId, dataArr, baseColor, label, highlightVals, activeV
 
 function renderAttackTables(tablesData) {
     var cBear = tablesData.counters.bearWhite;
+    var cYellow = tablesData.counters.bearYellow || { swings: 0, misses: 0, dodges: 0, parries: 0, crits: 0, hits: 0 };
     var cBoss = tablesData.counters.boss;
 
     function getPctRaw(count, total) { return total > 0 ? (count / total) * 100 : 0; }
@@ -1493,7 +1494,7 @@ function renderAttackTables(tablesData) {
         return htmlBar + htmlLegend;
     }
 
-    // Bear Attacks Boss
+    // Bear Attacks Boss (White Hits)
     var bearPoints = [
         { label: "Miss", width: getPctRaw(cBear.misses, cBear.swings), color: "#aaa" },
         { label: "Dodge", width: getPctRaw(cBear.dodges, cBear.swings), color: "#90caf9" },
@@ -1501,6 +1502,15 @@ function renderAttackTables(tablesData) {
         { label: "Glancing", width: getPctRaw(cBear.glances, cBear.swings), color: "#ffcc80" },
         { label: "Crit", width: getPctRaw(cBear.crits, cBear.swings), color: "#ffb74d" },
         { label: "Hit", width: getPctRaw(cBear.hits, cBear.swings), color: "rgba(255,255,255,0.2)" }
+    ];
+
+    // Bear Attacks Boss (Yellow Hits)
+    var yellowPoints = [
+        { label: "Miss", width: getPctRaw(cYellow.misses, cYellow.swings), color: "#aaa" },
+        { label: "Dodge", width: getPctRaw(cYellow.dodges, cYellow.swings), color: "#90caf9" },
+        { label: "Parry", width: getPctRaw(cYellow.parries, cYellow.swings), color: "#ce93d8" },
+        { label: "Crit", width: getPctRaw(cYellow.crits, cYellow.swings), color: "#ffb74d" },
+        { label: "Hit", width: getPctRaw(cYellow.hits, cYellow.swings), color: "rgba(255,255,255,0.2)" }
     ];
 
     // Boss Attacks Bear
@@ -1512,7 +1522,14 @@ function renderAttackTables(tablesData) {
         { label: "Hit", width: getPctRaw(cBoss.hits, cBoss.swings), color: "rgba(255,255,255,0.2)" }
     ];
 
-    document.getElementById("attackTableBody").innerHTML = buildStackedBar(bearPoints);
+    // Integriert beide Balken (White & Yellow) untereinander in die selbe Box
+    var htmlCombined = 
+        `<div style="margin-bottom: 5px; font-size: 0.8rem; color:#aaa; font-weight: bold;">WHITE HITS (Auto Attack / Extra Attacks)</div>` +
+        buildStackedBar(bearPoints) +
+        `<div style="margin-top: 15px; margin-bottom: 5px; font-size: 0.8rem; color:#aaa; font-weight: bold;">YELLOW HITS (Maul, Swipe, Savage Bite)</div>` +
+        buildStackedBar(yellowPoints);
+
+    document.getElementById("attackTableBody").innerHTML = htmlCombined;
     document.getElementById("mitigationTableBody").innerHTML = buildStackedBar(bossPoints);
 }
 
@@ -1520,7 +1537,6 @@ function renderAbilityStatsTable(abilityData, simTime) {
     var tb = document.getElementById("abilityStatsBody");
     if (!tb) return;
     
-    // Tabellen-Kopfzeile dynamisch überschreiben, um die neuen Spalten anzuzeigen
     var thead = tb.previousElementSibling;
     if (thead) {
         thead.innerHTML = `
@@ -1550,11 +1566,12 @@ function renderAbilityStatsTable(abilityData, simTime) {
 
     for (var key in abilityData) {
         var a = abilityData[key];
-        if (a.count === 0 && a.dmg === 0) continue;
+        
+        // Zwinge "Auto Attack", immer im UI zu erscheinen (als Feedback für den User)
+        if (a.count === 0 && a.dmg === 0 && key !== "Auto Attack") continue;
 
         var dps = a.dmg / simTime;
         
-        // Prozentuale Anteile basierend auf ALLEN Casts/Swings (a.count)
         var hitPct = (a.count > 0) ? ((a.hits || 0) / a.count) * 100 : 0;
         var critPct = (a.count > 0) ? ((a.crits || 0) / a.count) * 100 : 0;
         var glancePct = (a.count > 0) ? ((a.glances || 0) / a.count) * 100 : 0;
@@ -1563,10 +1580,10 @@ function renderAbilityStatsTable(abilityData, simTime) {
         var parryPct = (a.count > 0) ? ((a.parries || 0) / a.count) * 100 : 0;
 
         var color = "#fff";
-        if (key === "Maul" || key === "Swipe" || key === "Savage Bite") color = "#ffd700"; // Gold
-        if (key === "Thorns" || key === "Retribution Items") color = "#a5d6a7"; // Natur-Grün
-        if (key === "Obsidian Explosion") color = "#ff7043"; // Feuer-Orange
-        if (key === "Lifesteal (Heal)") color = "#f48fb1"; // Heilung-Pink
+        if (key === "Maul" || key === "Swipe" || key === "Savage Bite") color = "#ffd700"; 
+        if (key === "Thorns" || key === "Retribution Items") color = "#a5d6a7"; 
+        if (key === "Obsidian Explosion") color = "#ff7043"; 
+        if (key === "Lifesteal (Heal)") color = "#f48fb1"; 
 
         rows.push({
             name: key, dmg: a.dmg, dps: dps, count: a.count,
@@ -1600,11 +1617,11 @@ function renderAbilityStatsTable(abilityData, simTime) {
 // ============================================================================
 
 var LOG_DATA = [];
+var FILTERED_LOG_DATA = []; // NEU: Array für das Suchfeld
 var LOG_PAGE = 1;
 const LOG_PER_PAGE = 50;
 var LOG_BUFF_KEYS = [];
 
-// Diese Funktion ersetzt die alte renderCombatLog komplett!
 function renderCombatLog(log) {
     LOG_DATA = log || [];
     LOG_PAGE = 1;
@@ -1618,8 +1635,58 @@ function renderCombatLog(log) {
     });
     LOG_BUFF_KEYS = Array.from(allKeys).sort();
 
-    updateLogView();
+    // Initial filtern (falls noch Text im Suchfeld von vorherigen Läufen steht)
+    if (typeof filterCombatLog === 'function') {
+        filterCombatLog();
+    } else {
+        FILTERED_LOG_DATA = [...LOG_DATA];
+        updateLogView();
+    }
 }
+
+// NEU: Globale Filterfunktion (wird bei onkeyup im Suchfeld aufgerufen)
+window.filterCombatLog = function() {
+    var input = document.getElementById("logSearchInput");
+    if (!input) return;
+    var searchStr = input.value.toLowerCase();
+    
+    if (!searchStr) {
+        FILTERED_LOG_DATA = [...LOG_DATA];
+    } else {
+        FILTERED_LOG_DATA = LOG_DATA.filter(e => {
+            // Alle potenziell sichtbaren Spalten der Zeile zu einem Text-Array zusammenfassen
+            var rowText = [
+                e.time.toFixed(2),
+                e.event || "",
+                e.ability || "",
+                e.result || "",
+                e.dmg > 0 ? Math.floor(e.dmg) : "",
+                e.threat > 0 ? Math.floor(e.threat) : "",
+                e.hp || "",
+                e.hpChange || "",
+                e.rage !== undefined ? Math.floor(e.rage) : "",
+                e.rageChange !== undefined ? Math.floor(e.rageChange) : "",
+                e.armor || "",
+                e.ap || "",
+                e.haste !== undefined ? e.haste.toFixed(1) + "%" : "",
+                e.arp || "",
+                e.info || ""
+            ];
+            
+            // Buff-Spalten hinzufügen
+            LOG_BUFF_KEYS.forEach(key => {
+                if (e.activeBuffs && e.activeBuffs[key] !== undefined) {
+                    rowText.push(e.activeBuffs[key]);
+                }
+            });
+            
+            // Prüfen, ob der Suchtext irgendwo in der kombinierten Zeile steht
+            return rowText.join(" ").toLowerCase().includes(searchStr);
+        });
+    }
+    LOG_PAGE = 1; // Nach jeder Suche zurück auf Seite 1
+    updateLogView();
+};
 
 function updateLogView() {
     var container = document.getElementById("logTableHeader");
@@ -1654,13 +1721,15 @@ function updateLogView() {
     if (!tb) return;
     tb.innerHTML = "";
 
-    if (LOG_DATA.length === 0) {
-        tb.innerHTML = "<tr><td colspan='100%' style='color:#888; text-align:center; padding:15px;'>No log available. (Run Avg or specific iteration)</td></tr>";
+    if (FILTERED_LOG_DATA.length === 0) {
+        tb.innerHTML = "<tr><td colspan='100%' style='color:#888; text-align:center; padding:15px;'>No log entries match your search (or log is empty).</td></tr>";
+        var pageLabel = document.getElementById("logPageLabel");
+        if (pageLabel) pageLabel.innerText = "Page 1 / 1";
         return;
     }
 
     var start = (LOG_PAGE - 1) * LOG_PER_PAGE;
-    var slice = LOG_DATA.slice(start, start + LOG_PER_PAGE);
+    var slice = FILTERED_LOG_DATA.slice(start, start + LOG_PER_PAGE);
 
     slice.forEach(e => {
         var tr = document.createElement("tr");
@@ -1712,7 +1781,7 @@ function updateLogView() {
     // Paginierungs-Anzeige aktualisieren (die Buttons hattest du schon in der index.html)
     var pageLabel = document.getElementById("logPageLabel");
     if (pageLabel) {
-        var maxPages = Math.ceil(LOG_DATA.length / LOG_PER_PAGE);
+        var maxPages = Math.ceil(FILTERED_LOG_DATA.length / LOG_PER_PAGE);
         if (maxPages === 0) maxPages = 1;
         pageLabel.innerText = "Page " + LOG_PAGE + " / " + maxPages;
     }
@@ -1720,7 +1789,7 @@ function updateLogView() {
 
 // Global scope definieren, damit Buttons im HTML greifen
 window.nextLogPage = function() {
-    if (LOG_PAGE * LOG_PER_PAGE < LOG_DATA.length) { LOG_PAGE++; updateLogView(); }
+    if (LOG_PAGE * LOG_PER_PAGE < FILTERED_LOG_DATA.length) { LOG_PAGE++; updateLogView(); }
 };
 
 window.prevLogPage = function() {

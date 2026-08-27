@@ -1104,7 +1104,8 @@
                                 style="margin-top: 30px; border-top: 1px solid #333; padding-top: 20px;">
                                 <div class="results-header">
                                     <h2>📜 Combat Log (Average Run)</h2>
-                                    <div class="log-actions">
+                                    <div class="log-actions" style="display:flex; align-items:center; gap:5px;">
+                                        <input type="text" id="logSearchInput" placeholder="Search log..." onkeyup="filterCombatLog()" style="padding: 4px; border-radius: 4px; border: 1px solid #555; background: rgba(0,0,0,0.3); color: #fff; margin-right: 10px;">
                                         <button class="btn-mini" onclick="prevLogPage()"> &lt; </button>
                                         <span id="logPageLabel" style="font-size:0.8rem; padding:5px;">Page 1</span>
                                         <button class="btn-mini" onclick="nextLogPage()"> &gt; </button>

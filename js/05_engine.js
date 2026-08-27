@@ -184,6 +184,7 @@ function runSingleSim(config, captureLog) {
         // NEU: Zähler für die Tabellen
         counters: {
             bearWhite: { swings: 0, misses: 0, dodges: 0, parries: 0, glances: 0, crits: 0, hits: 0 },
+            bearYellow: { swings: 0, misses: 0, dodges: 0, parries: 0, crits: 0, hits: 0 }, // NEUER COUNTER
             boss: { swings: 0, misses: 0, dodges: 0, crits: 0, crushes: 0, hits: 0 }
         },
         
@@ -212,7 +213,9 @@ function runSingleSim(config, captureLog) {
                  ursaRoar: 0, dreamwalkerDuration: 0, obsidianScale: 0,
                  lionHorn: 0, castellan: 0, forceOfWill: 0, frenziedRegen: 0 }, 
         debuffs: { faerieFire: 0, demoralizingRoar: 0 , giftOfArthas: 0},
-        abilityStats: {},
+        abilityStats: {
+            "Auto Attack": { count: 0, dmg: 0, hits: 0, crits: 0, glances: 0, misses: 0, dodges: 0, parries: 0 }
+        }, // Erzwingt Initialisierung
 
         bossMechanicCD: 10.0, // Erster Einsatz der Fähigkeit nach 10 Sekunden
         bossBuffs: { frenzy: 0 },
@@ -823,7 +826,7 @@ function resolvePlayerAttack(baseDmg, skillName, threatMod, miss, dodge, parry, 
     if (state.buffs.ursaRoar > 0) finalDmg += 25; // NEU: Ursa 5/6 gibt +25 Flat Physical Damage
     if (config.consum_bogling) finalDmg += 1;
 
-    var isWhiteAttack = (skillName === "Auto Attack");
+    var isWhiteAttack = (skillName === "Auto Attack" || skillName === "Extra Attack");
 
     // Hilfsfunktion für Parry-Haste des Bosses
     function triggerBossParryHaste() {
@@ -845,17 +848,11 @@ function resolvePlayerAttack(baseDmg, skillName, threatMod, miss, dodge, parry, 
         var threatGenerated = finalDmg * threatMod;
         state.threat += threatGenerated;
 
-        // NEU: Stats sauber auf die Kategorien aufteilen
+        // Stats sauber auf die Kategorien aufteilen (ohne doppelte Zählung!)
         state.abilityStats[skillName].dmg += finalDmg;
         if (isCrit) state.abilityStats[skillName].crits++;
         else if (isGlancing) state.abilityStats[skillName].glances++;
         else state.abilityStats[skillName].hits++;
-
-        if (!state.abilityStats[skillName]) state.abilityStats[skillName] = { count: 0, dmg: 0, crits: 0, glances: 0 };
-        state.abilityStats[skillName].count++;
-        state.abilityStats[skillName].dmg += finalDmg;
-        if (isCrit) state.abilityStats[skillName].crits++;
-        if (isGlancing) state.abilityStats[skillName].glances++;
 
         var rageGained = 0;
         if (skillName === "Auto Attack") {
@@ -942,11 +939,12 @@ function resolvePlayerAttack(baseDmg, skillName, threatMod, miss, dodge, parry, 
     }
 
     // Hilfsfunktion zur Behandlung von Fehlversuchen (Rage Refund)
+    // Hilfsfunktion zur Behandlung von Fehlversuchen (Refund)
     function handleAvoidance(avoidType) {
         var refund = 0;
         if (!wasClearcast && rageCost > 0) {
             if (skillName === "Maul") refund = rageCost; // 100% Refund, da Next-Melee
-            else if (skillName !== "Auto Attack" && skillName !== "Extra Attack") refund = Math.floor(rageCost * 0.8); // 80% Refund für Yellow Hits
+            else if (!isWhiteAttack) refund = Math.floor(rageCost * 0.8); // 80% Refund für Yellow Hits
         }
         
         if (refund > 0) {
@@ -959,12 +957,15 @@ function resolvePlayerAttack(baseDmg, skillName, threatMod, miss, dodge, parry, 
         if (avoidType === "MISS") {
             state.abilityStats[skillName].misses++;
             if (isWhiteAttack) state.counters.bearWhite.misses++;
+            else state.counters.bearYellow.misses++; // In Yellow-Tabelle eintragen
         } else if (avoidType === "DODGED") {
             state.abilityStats[skillName].dodges++;
             if (isWhiteAttack) state.counters.bearWhite.dodges++;
+            else state.counters.bearYellow.dodges++; // In Yellow-Tabelle eintragen
         } else if (avoidType === "PARRIED") {
             state.abilityStats[skillName].parries++;
             if (isWhiteAttack) state.counters.bearWhite.parries++;
+            else state.counters.bearYellow.parries++; // In Yellow-Tabelle eintragen
             triggerBossParryHaste();
         }
         
@@ -1008,6 +1009,8 @@ function resolvePlayerAttack(baseDmg, skillName, threatMod, miss, dodge, parry, 
         var chanceDodge = chanceMiss + dodge;
         var chanceParry = chanceDodge + parry;
 
+        state.counters.bearYellow.swings++; // Zählt Yellow Hits
+
         if (roll < chanceMiss) {
             handleAvoidance("MISS");
         } else if (roll < chanceDodge) {
@@ -1017,6 +1020,11 @@ function resolvePlayerAttack(baseDmg, skillName, threatMod, miss, dodge, parry, 
         } else {
             var roll2 = rng.nextFloat() * 100;
             var isCrit = (roll2 < crit);
+
+            // Zählt Hits / Crits für Yellow Hits
+            if (isCrit) state.counters.bearYellow.crits++;
+            else state.counters.bearYellow.hits++;
+
             applySuccessfulHit(isCrit, false);
         }
     }
@@ -1051,12 +1059,13 @@ function finalizeSimulation(results, config) {
     // Zähler für die Tabellen aggregieren
     var aggCounters = {
         bearWhite: { swings: 0, misses: 0, dodges: 0, parries: 0, glances: 0, crits: 0, hits: 0 },
+        bearYellow: { swings: 0, misses: 0, dodges: 0, parries: 0, crits: 0, hits: 0 }, // NEU
         boss: { swings: 0, misses: 0, dodges: 0, crits: 0, crushes: 0, hits: 0 }
     };
 
     results.forEach(r => {
         if (!r.counters) return;
-        ['bearWhite', 'boss'].forEach(cat => {
+        ['bearWhite', 'bearYellow', 'boss'].forEach(cat => {
             for (let k in r.counters[cat]) { aggCounters[cat][k] += r.counters[cat][k]; }
         });
     });
