@@ -967,10 +967,10 @@ function applyConfigToUI(cfg, gearData, enchantData) {
                 if (tpSel) tpSel.value = ""; 
             } else {
                 // DEFAULT PRESET LADEN, falls komplett leer!
-                if (typeof TALENT_PRESETS !== 'undefined' && TALENT_PRESETS["Survival Tank (11/35/5)"]) {
-                    TALENT_CONFIG = JSON.parse(JSON.stringify(TALENT_PRESETS["Survival Tank (11/35/5)"]));
+                if (typeof TALENT_PRESETS !== 'undefined' && TALENT_PRESETS["Tank (11/35/5)"]) {
+                    TALENT_CONFIG = JSON.parse(JSON.stringify(TALENT_PRESETS["Tank (11/35/5)"]));
                     var tpSel = document.getElementById("talent_preset_select");
-                    if (tpSel) tpSel.value = "Survival Tank (11/35/5)";
+                    if (tpSel) tpSel.value = "Tank (11/35/5)";
                 }
             }
         }
