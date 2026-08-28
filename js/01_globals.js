@@ -29,8 +29,8 @@ const ROTATION_SKILLS = [
     { id: "Feral Charge", name: "Feral Charge", icon: "ability_hunter_pet_bear" }, 
     { id: "Demoralizing Roar", name: "Demoralizing Roar", icon: "ability_druid_demoralizingroar" },
     { id: "Frenzied Regeneration", name: "Frenzied Regeneration", icon: "ability_bullrush" },
-    { id: "Trinket 1", name: "Use Trinket 1", icon: "inv_jewelry_trinket_04" },
-    { id: "Trinket 2", name: "Use Trinket 2", icon: "inv_jewelry_trinket_04" },
+    { id: "Trinket 1", name: "Use Trinket 1", icon: "inv_jewelry_talisman_07" },
+    { id: "Trinket 2", name: "Use Trinket 2", icon: "inv_jewelry_talisman_08" },
     { id: "Potion", name: "Use Potion/Juju", icon: "inv_potion_27" }
 ];
 
@@ -51,8 +51,7 @@ const PRESET_ROTATIONS = {
         steps: [
             { id: "step_1", skill: "Trinket 1", conditions: [] },
             { id: "step_2", skill: "Trinket 2", conditions: [] },
-            { id: "step_3", skill: "Potion", conditions: [] },
-            { id: "step_4", skill: "Enrage", conditions: [{ type: "time_elapsed", op: "<=", val: 0 }, { type: "hp_pct", op: ">=", val: 50 }] },
+            { id: "step_4", skill: "Enrage", conditions: [{ type: "rage", op: "<=", val: 25 }] },
             { id: "step_5", skill: "Feral Charge", conditions: [{ type: "time_elapsed", op: "<=", val: 0 }] },
             { id: "step_6", skill: "Faerie Fire", conditions: [{ type: "debuff_rem", target: "Faerie Fire", op: "<=", val: 0 }] },
             { id: "step_7", skill: "Savage Bite", conditions: [{ type: "rage", op: ">=", val: 30 }] },

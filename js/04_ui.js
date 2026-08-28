@@ -1022,21 +1022,25 @@ function setupUIListeners() {
         }
     });
 
-    // --- NEU: Event-Listener für Talente, Consumables & Buffs ---
+    // IN setupUIListeners() hinzufügen / anpassen:
     var statTriggerSelectors = [
-        'select[id^="tal_"]',      // Flex-Talente
-        'select[id^="consum_"]',   // Consumable Dropdowns (z.B. ZG, Blasted Lands)
-        'input[id^="consum_"]',    // Consumable Checkboxen (Flasks, Elixiere)
-        'input[id^="buff_"]'       // Raid Buff Checkboxen (MotW, Kings)
+        'select[id^="tal_"]',      
+        'select[id^="consum_"]',   
+        'input[id^="consum_"]',    
+        'input[id^="buff_"]',
+        'input[id^="debuff_"]',      // NEU: Boss Debuffs
+        '#enemy_armor',              // NEU: Base Armor
+        '#stat_arp'                  // NEU: ArP
     ].join(', ');
 
     document.querySelectorAll(statTriggerSelectors).forEach(function(el) {
         el.addEventListener('change', function() {
-            if (typeof calculateGearStats === 'function') {
-                calculateGearStats();
-            }
+            if (typeof calculateGearStats === 'function') calculateGearStats();
+            updateBossArmorBar(); // NEU: Balken aktualisieren
         });
     });
+
+    
 
     var bossSel = document.getElementById("enemy_boss_select");
     if (bossSel) {
@@ -1098,7 +1102,9 @@ function setupUIListeners() {
             }
         });
     });
-
+    
+    
+    updateBossArmorBar();
     populatePresetDropdown();
     renderRotationBuilder();
     if(typeof populateGearPresets === 'function') populateGearPresets();
@@ -1874,6 +1880,34 @@ function updateDamageScaling() {
         `;
         tb.appendChild(tr);
     });
+}
+
+function updateBossArmorBar() {
+    var baseArmor = parseFloat(document.getElementById("enemy_armor")?.value || 0);
+    
+    var debuffArmor = 0;
+    if (document.getElementById("debuff_major_armor")?.checked) debuffArmor += 2550;
+    if (document.getElementById("debuff_ff")?.checked) debuffArmor += 505;
+    if (document.getElementById("debuff_cor")?.checked) debuffArmor += 640;
+    if (document.getElementById("debuff_eskhandar")?.checked) debuffArmor += 250;
+    
+    var arp = parseFloat(document.getElementById("stat_arp")?.value || 0);
+    
+    var effectiveArmor = Math.max(0, baseArmor - debuffArmor - arp);
+    
+    // DR Formel für Level 60 Angreifer (Bär) vs Boss
+    // Damage Reduction = Armor / (Armor + 400 + 85 * AttackerLevel)
+    var dr = effectiveArmor / (effectiveArmor + 400 + (85 * 60));
+    var drPct = (dr * 100).toFixed(1);
+    
+    // UI Update
+    var valEl = document.getElementById("ui_boss_armor_val");
+    var barEl = document.getElementById("ui_boss_dr_bar");
+    var drEl = document.getElementById("ui_boss_dr_val");
+    
+    if (valEl) valEl.innerText = Math.floor(effectiveArmor);
+    if (drEl) drEl.innerText = drPct + "%";
+    if (barEl) barEl.style.width = drPct + "%";
 }
 
 function openOtherSimsModal() {

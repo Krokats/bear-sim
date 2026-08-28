@@ -663,61 +663,7 @@
                                             </div>
                                         </div>
 
-                                        <!-- Column 3: Bear Talents -->
-                                        <!-- Column 3: Bear Talents -->
-                                        <div class="card" style="margin:0;">
-                                            <div class="sub-card-header">
-                                                <h2>🌿 Bear Talents</h2>
-                                            </div>
-                                            <div class="card-body">
-
-                                                <div class="input-group">
-                                                    <label style="color:#ffb74d;">Flex Points (Choose 1)</label>
-                                                    <div class="select-wrapper">
-                                                        <select id="tal_flex">
-                                                            <option value="swiftness" selected>Feral Swiftness (+4%
-                                                                Dodge)</option>
-                                                            <option value="aggression">Feral Aggression (+16% Demo Roar
-                                                                effect)</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-
-                                                <p style="font-size:0.75rem; color:#888; margin-bottom:10px;">Core Feral
-                                                    Tank Build (11/35/5) is permanently active.</p>
-
-                                                <div
-                                                    style="background:rgba(0,0,0,0.2); border:1px solid #333; border-radius:4px; padding:10px; margin-bottom:10px; font-size:0.8rem; color:#aaa; max-height: 250px; overflow-y: auto;">
-                                                    <ul
-                                                        style="margin:0; padding-left:15px; display:flex; flex-direction:column; gap:4px;">
-                                                        <li><b style="color:#fff;">Ferocity:</b> -5 Rage cost</li>
-                                                        <li><b style="color:#fff;">Feral Instinct:</b> +15% Threat</li>
-                                                        <li><b style="color:#fff;">Thick Hide:</b> +10% Armor</li>
-                                                        <li><b style="color:#fff;">Sharpened Claws:</b> +6% Crit</li>
-                                                        <li><b style="color:#fff;">Primal Fury:</b> +5 Rage on Crit</li>
-                                                        <li><b style="color:#fff;">Predatory Strikes:</b> +10% AP, +20%
-                                                            Dmg</li>
-                                                        <li><b style="color:#fff;">Blood Frenzy:</b> +10 Rage, +20%
-                                                            Attack Speed on Enrage</li>
-                                                        <li><b style="color:#fff;">Ancient Brutality:</b> +4 Rage/s on
-                                                            Dodge</li>
-                                                        <li><b style="color:#fff;">Heart of the Wild:</b> +20% Stamina
-                                                        </li>
-                                                        <li><b style="color:#fff;">Carnage:</b> 5% Heal from
-                                                            Maul/Swipe/Bite</li>
-                                                        <li><b style="color:#fff;">Leader of the Pack:</b> +3% Crit</li>
-                                                        <li><b style="color:#fff;">Furor:</b> +10 Rage on Shapeshift
-                                                        </li>
-                                                        <li><b style="color:#fff;">Natural Weapons:</b> +10% Dmg, +3%
-                                                            Hit</li>
-                                                        <li><b style="color:#fff;">Omen of Clarity:</b> Clearcasting
-                                                        </li>
-                                                    </ul>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- Column 4: Enemy Target -->
+                                        <!-- Column 3: Enemy Target (Ehemals Column 4) -->
                                         <div class="card" style="margin:0;">
                                             <div class="sub-card-header">
                                                 <h2>💀 Enemy Target</h2>
@@ -729,15 +675,10 @@
                                                         <select id="enemy_boss_select"></select>
                                                     </div>
                                                 </div>
-                                                <div class="input-group"><label>Level</label><input type="number"
-                                                        id="enemy_level" value="63"></div>
-                                                <div class="input-group"><label>Armor</label><input type="number"
-                                                        id="enemy_armor" value="4611"></div>
-                                                <div class="input-group"><label>Base Damage</label><input type="number"
-                                                        id="boss_base_dmg" value="6000"></div>
-                                                <div class="input-group"><label>Attack Speed (s)</label><input
-                                                        type="number" id="boss_attack_speed" value="1.2" step="0.1">
-                                                </div>
+                                                <div class="input-group"><label>Level</label><input type="number" id="enemy_level" value="63"></div>
+                                                <div class="input-group"><label>Base Armor</label><input type="number" id="enemy_armor" value="4611"></div>
+                                                <div class="input-group"><label>Base Damage</label><input type="number" id="boss_base_dmg" value="6000"></div>
+                                                <div class="input-group"><label>Attack Speed (s)</label><input type="number" id="boss_attack_speed" value="1.2" step="0.1"></div>
 
                                                 <div class="checkbox-grid" style="grid-template-columns: 1fr; margin-bottom: 10px;">
                                                     <label class="custom-checkbox" style="color: #ffb74d;">
@@ -746,19 +687,25 @@
                                                 </div>
 
                                                 <div class="gear-section-title">Target Debuffs</div>
-                                                <div class="checkbox-grid" style="grid-template-columns: 1fr;">
-                                                    <label class="custom-checkbox"><input type="checkbox"
-                                                            id="debuff_major_armor" checked><span
-                                                            class="checkmark"></span> Sunder / Expose (-2550)</label>
-                                                    <label class="custom-checkbox"><input type="checkbox" id="debuff_ff"
-                                                            checked><span class="checkmark"></span> Faerie Fire
-                                                        (-505)</label>
-                                                    <label class="custom-checkbox"><input type="checkbox"
-                                                            id="debuff_cor" checked><span class="checkmark"></span>
-                                                        Curse of Recklessness (-640)</label>
-                                                    <label class="custom-checkbox"><input type="checkbox"
-                                                            id="debuff_eskhandar"><span class="checkmark"></span>
-                                                        Eskhandar's Collar (-250)</label>
+                                                <div class="checkbox-grid" style="grid-template-columns: 1fr; margin-bottom: 15px;">
+                                                    <label class="custom-checkbox"><input type="checkbox" id="debuff_major_armor" checked><span class="checkmark"></span> Sunder / Expose (-2550)</label>
+                                                    <label class="custom-checkbox"><input type="checkbox" id="debuff_ff" checked><span class="checkmark"></span> Faerie Fire (-505)</label>
+                                                    <label class="custom-checkbox"><input type="checkbox" id="debuff_cor" checked><span class="checkmark"></span> Curse of Recklessness (-640)</label>
+                                                    <label class="custom-checkbox"><input type="checkbox" id="debuff_eskhandar"><span class="checkmark"></span> Eskhandar's Collar (-250)</label>
+                                                </div>
+
+                                                <!-- NEU: Boss Armor & Damage Reduction Bar -->
+                                                <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+                                                    <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 5px;">
+                                                        <span style="color: #aaa;">Effective Armor:</span>
+                                                        <span id="ui_boss_armor_val" style="color: #fff; font-weight: bold;">0</span>
+                                                    </div>
+                                                    <div class="progress-track" style="height: 12px; background: #222; border-radius: 6px; overflow: hidden; position: relative;">
+                                                        <div id="ui_boss_dr_bar" style="height: 100%; width: 0%; background: #ffb74d; transition: width 0.3s;"></div>
+                                                    </div>
+                                                    <div style="text-align: right; font-size: 0.75rem; color: #ffb74d; margin-top: 4px;">
+                                                        Damage Reduction: <span id="ui_boss_dr_val">0%</span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

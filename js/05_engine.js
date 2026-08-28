@@ -655,7 +655,7 @@ function runSingleSim(config, captureLog) {
                         state.debuffs.faerieFire = 40.0;
                         state.cooldowns.faerieFire = 6.0 - effects.ffCooldownRed; // Cenarion 3/8 Bonus
                         logAction(state.time, "Cast", "Faerie Fire", "Applied", 0, threatMods.faerieFire, 0, 0, "-505 Armor");
-                        state.gcd = 1.0; canAct = false; 
+                        state.gcd = 1.5; canAct = false; 
                     }
                     // NEU: Barkskin Cast
                     else if (step.skill.includes("Barkskin") && state.cooldowns.barkskin <= 0) {
