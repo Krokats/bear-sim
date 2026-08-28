@@ -18,6 +18,11 @@ function runSimulation() {
 
     showProgress("Simulating Tank Combat...");
 
+    var searchInput = document.getElementById("logSearchInput");
+    if (searchInput) {
+        searchInput.value = "";
+    }
+
     // Seed-Vorbereitung (Analog zur Boomkin-Sim)
     var baseSeed = 0;
     // Wenn es ein UI-Feld für den Seed gibt, nutze es. Ansonsten nimm was zufälliges.
