@@ -19,6 +19,34 @@ function getDbSlots(uiSlotName) {
     return [uiSlotName]; // Fallback für Head, Neck, Chest etc.
 }
 
+
+// --- NEU: Globale Variablen für den Waffen-Filter ---
+var MH_FILTER_ONE = true;
+var MH_FILTER_TWO = true;
+
+// Helper für das rote Leuchten des Buttons
+function getFilterBtnStyle(isActive) {
+    return isActive 
+        ? "background: var(--rage-red); color: #fff; border-color: var(--rage-red); box-shadow: 0 0 8px rgba(229,57,53,0.4);" 
+        : "";
+}
+
+// Toggle-Funktion für die Buttons
+window.toggleMHFilter = function(type) {
+    if (type === 'one') MH_FILTER_ONE = !MH_FILTER_ONE;
+    if (type === 'two') MH_FILTER_TWO = !MH_FILTER_TWO;
+    
+    // Optik der Buttons live anpassen
+    var btnOne = document.getElementById("btn_filter_one");
+    var btnTwo = document.getElementById("btn_filter_two");
+    
+    if (btnOne) btnOne.style.cssText = getFilterBtnStyle(MH_FILTER_ONE);
+    if (btnTwo) btnTwo.style.cssText = getFilterBtnStyle(MH_FILTER_TWO);
+    
+    // Liste sofort filtern
+    filterItemList();
+};
+
 var currentItemSort = 'ep';
 
 function openItemSelector(slotName, sortOverride) {
@@ -40,43 +68,48 @@ function openItemSelector(slotName, sortOverride) {
     var allowedDbSlots = getDbSlots(slotName);
     
     var validItems = ITEM_DB.filter(i => {
-        // Passt der Slot?
         if (!allowedDbSlots.includes(i.slot)) return false;
-
-        // Unique Check: Ist das Item einzigartig und schon woanders angelegt?
         if (i.unique) {
             for (var eqSlot in GEAR_SELECTION) {
-                // Wenn wir einen anderen Slot prüfen und dort genau dieses Item liegt -> filtern!
-                if (eqSlot !== slotName && GEAR_SELECTION[eqSlot] === i.id) {
-                    return false;
-                }
+                if (eqSlot !== slotName && GEAR_SELECTION[eqSlot] === i.id) return false;
             }
         }
         return true;
     });
 
-    // Dynamische Sortierung
     validItems.sort((a, b) => {
         var scoreA = calculateItemScore(a, slotName);
         var scoreB = calculateItemScore(b, slotName);
         return scoreB[currentItemSort] - scoreA[currentItemSort];
     });
 
-    // Hilfsfunktion für aktiven Button-Style
     function getBtnStyle(sortType) {
         return currentItemSort === sortType 
             ? "background: var(--rage-red); color: #fff; border-color: var(--rage-red); box-shadow: 0 0 8px rgba(229,57,53,0.4);" 
             : "";
     }
+    
+    // --- NEU: Buttons für die Main Hand rendern ---
+    var extraFilters = "";
+    if (slotName === "Main Hand") {
+        extraFilters = `
+            <div style="display:flex; gap:10px; padding: 6px 10px; background:rgba(0,0,0,0.3); border-bottom:1px solid #333; justify-content: center; align-items: center;">
+                <span style="color:#aaa; font-size:0.8rem; font-weight:bold; margin-right:5px;">Filter:</span>
+                <button id="btn_filter_one" class="btn-mini" style="${getFilterBtnStyle(MH_FILTER_ONE)}" onclick="toggleMHFilter('one')">One-Hand / Main Hand</button>
+                <button id="btn_filter_two" class="btn-mini" style="${getFilterBtnStyle(MH_FILTER_TWO)}" onclick="toggleMHFilter('two')">Two-Hand</button>
+            </div>
+        `;
+    }
 
     // Sortier-Buttons HTML (Angepinnt)
     var html = `
         <div style="position: sticky; top: -10px; z-index: 10; background: var(--card-bg); margin: -10px -10px 10px -10px; border-bottom: 1px solid #333; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
-            <div style="display:flex; gap:10px; padding:10px; border-bottom:1px solid #333; background:rgba(0,0,0,0.3);">
+            <div style="display:flex; gap:10px; padding:10px; border-bottom:1px solid #333; background:rgba(0,0,0,0.4);">
                 <button class="btn-mini" style="${getBtnStyle('ep')}" onclick="openItemSelector('${slotName}', 'ep')">Sort: EP</button>
                 <button class="btn-mini" style="${getBtnStyle('tep')}" onclick="openItemSelector('${slotName}', 'tep')">Sort: TEP</button>
                 <button class="btn-mini" style="${getBtnStyle('mep')}" onclick="openItemSelector('${slotName}', 'mep')">Sort: MEP</button>
             </div>
+            ${extraFilters}
             <div class="modal-list-item" onclick="selectItem('${slotName}', 0)" style="padding: 10px; cursor: pointer; display: flex; transition: background 0.2s;" onmouseover="this.style.background='#2a2a2a'" onmouseout="this.style.background='transparent'">
                 <div style="flex:1; color: #aaa; font-weight: bold; text-align: center;">Unequip / None</div>
             </div>
@@ -104,7 +137,8 @@ function openItemSelector(slotName, sortOverride) {
         var qClass = "q" + (item.quality || 1);
         var iconUrl = getIconUrl(item.icon);
         
-        html += `<div class="modal-list-item" onclick="selectItem('${slotName}', ${item.id})" 
+        // --- NEU: data-slot hinzugefügt, um später danach zu filtern ---
+        html += `<div class="modal-list-item" data-slot="${item.slot || ''}" onclick="selectItem('${slotName}', ${item.id})" 
                     onmouseenter="showTooltip(event, ${item.id}, 'item')" onmouseleave="hideTooltip()" onmousemove="moveTooltip(event)"
                     style="padding: 10px; border-bottom: 1px solid #333; cursor: pointer; display: flex; align-items: center;">
                     <img src="${iconUrl}" style="width:36px; height:36px; border-radius:4px; margin-right:12px; border: 1px solid #444;">
@@ -122,6 +156,7 @@ function openItemSelector(slotName, sortOverride) {
 
     listContainer.innerHTML = html;
     modal.classList.remove("hidden");
+    filterItemList();
 }
 
 function filterItemList() {
@@ -132,20 +167,38 @@ function filterItemList() {
     var listContainer = document.getElementById("modalItemList");
     var items = listContainer.getElementsByClassName("modal-list-item");
 
+    // Prüfen, ob wir gerade im Main Hand Slot sind (Buttons existieren im DOM)
+    var hasWeaponFilter = document.getElementById("btn_filter_one") !== null;
+
     for (var i = 0; i < items.length; i++) {
         // Ignoriere den "Unequip" Button (damit man Items immer ausziehen kann)
-        if (items[i].innerText.includes("Unequip / None")) continue;
+        if (items[i].innerText.includes("Unequip / None")) {
+            items[i].style.display = "flex";
+            continue;
+        }
 
         var text = items[i].textContent || items[i].innerText;
-        if (text.toLowerCase().indexOf(filter) > -1) {
-            // KORREKTUR: Hier "flex" statt "" eintragen!
+        var itemSlot = items[i].getAttribute("data-slot") || "";
+        
+        var matchText = text.toLowerCase().indexOf(filter) > -1;
+        var matchSlot = true;
+
+        // Nur Waffentypen filtern, wenn die Buttons überhaupt da sind (also Main Hand)
+        if (hasWeaponFilter) {
+            if (itemSlot === "Two-hand") {
+                matchSlot = MH_FILTER_TWO;
+            } else if (itemSlot === "One-hand" || itemSlot === "Main Hand") {
+                matchSlot = MH_FILTER_ONE;
+            }
+        }
+
+        if (matchText && matchSlot) {
             items[i].style.display = "flex"; 
         } else {
             items[i].style.display = "none";
         }
     }
 }
-
 
 
 // ============================================================================
@@ -1103,7 +1156,7 @@ function setupUIListeners() {
         });
     });
     
-    
+
     updateBossArmorBar();
     populatePresetDropdown();
     renderRotationBuilder();
