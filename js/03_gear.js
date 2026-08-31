@@ -19,16 +19,48 @@ async function loadDatabase() {
         ]);
         
         // --- JSONL Parsing ---
-        if (rItems && rItems.ok) {
-            const text = await rItems.text();
-            ITEM_DB = text.split('\n')
-                .filter(line => line.trim() !== '') // Leere Zeilen überspringen
-                .map(line => JSON.parse(line));
-            console.log("[Debug] items.jsonl geladen. Anzahl:", ITEM_DB.length);
-        } else {
-            console.warn("[Debug] items.jsonl konnte nicht geladen werden.");
-            ITEM_DB = [];
-        }
+        // if (rItems && rItems.ok) {
+        //    const text = await rItems.text();
+        //    ITEM_DB = text.split('\n')
+        //        .filter(line => line.trim() !== '') // Leere Zeilen überspringen
+        //        .map(line => JSON.parse(line));
+        //    console.log("[Debug] items.jsonl geladen. Anzahl:", ITEM_DB.length);
+        //} else {
+        //    console.warn("[Debug] items.jsonl konnte nicht geladen werden.");
+        //    ITEM_DB = [];
+        //}
+        // 1. JSONL einlesen: Als Text laden, in Zeilen aufteilen und jede Zeile parsen
+        const itemsText = await rItems.text();
+        const items = itemsText
+            .split(/\r?\n/) // Berücksichtigt Windows (\r\n) und Linux (\n) Zeilenumbrüche
+            .filter(line => line.trim() !== '') // Leere Zeilen (z.B. am Ende der Datei) ignorieren
+            .map(line => JSON.parse(line)); // Jede einzelne Zeile als JSON parsen
+
+        // ---> NEU: Dynamische Trennung von Instances und Raids <---
+        const raidList = [
+            "Blackwing Lair", 
+            "Emerald Sanctum", 
+            "Lower Karazhan Halls", 
+            "Molten Core", 
+            "Naxxramas",
+            "Onyxia's Lair", 
+            "Ruins of Ahn'Qiraj", 
+            "Temple of Ahn'Qiraj", 
+            "Timbermaw Hold", 
+            "Upper Karazhan Halls", 
+            "Zul'Gurub"
+        ];
+
+        items.forEach(item => {
+            if (item.sources) {
+                item.sources.forEach(src => {
+                    // Wenn es als Instance deklariert ist, aber in der Raid-Liste steht -> Kategorie ändern
+                    if (src.category === "Instances" && raidList.includes(src.subCategory)) {
+                        src.category = "Raids";
+                    }
+                });
+            }
+        });
         
         // --- Normales JSON Parsing für Enchants ---
         if (rEnchants && rEnchants.ok) {
@@ -36,9 +68,19 @@ async function loadDatabase() {
         } else {
             ENCHANT_DB = [];
         }
+
         
+        ITEM_DB = items.filter(i => {
+            return true;
+        });
+
+        // Build Map for O(1) lookup
         ITEM_ID_MAP = {};
         ITEM_DB.forEach(i => { ITEM_ID_MAP[i.id] = i; });
+
+        // ---> NEU: Dynamische Baumstruktur für den globalen Quellen-Filter erstellen
+        if (typeof initSourceTree === "function") initSourceTree();
+        // <---
         
         console.log("[Debug] Datenbank vorbereitet. Rufe initGearPlannerUI auf...");
         if (typeof initGearPlannerUI === 'function') initGearPlannerUI();
@@ -525,3 +567,237 @@ function deleteGearPreset() {
     populateGearPresets();
     if(typeof showToast === 'function') showToast("Gear Preset deleted!");
 }
+
+// ============================================================================
+// SOURCE FILTER LOGIC (Global Multi-Level Menu)
+// ============================================================================
+var SOURCE_TREE = {};
+var WORLD_DROPS_ENABLED = true;
+
+function initSourceTree() {
+    SOURCE_TREE = {};
+    WORLD_DROPS_ENABLED = true;
+
+    ITEM_DB.forEach(item => {
+        if (!item.sources || item.sources.length === 0) {
+            // World drop
+        } else {
+            item.sources.forEach(src => {
+                let cat = src.category || "Unknown";
+                let sub = src.subCategory || "Unknown";
+                let det = src.detail || ""; 
+
+                if (!SOURCE_TREE[cat]) SOURCE_TREE[cat] = {};
+                if (!SOURCE_TREE[cat][sub]) SOURCE_TREE[cat][sub] = {};
+                if (SOURCE_TREE[cat][sub][det] === undefined) {
+                    SOURCE_TREE[cat][sub][det] = true; // Default: Alles ist anwählbar
+                }
+            });
+        }
+    });
+    // Menü nur noch EINMAL bauen, statt bei jedem Klick!
+    buildSourceMenuDOM(); 
+}
+
+function buildSourceMenuDOM() {
+    var root = document.getElementById("sourceMenuRoot");
+    if (!root) return;
+    root.innerHTML = "";
+
+    // 1. Checkbox für World Drops
+    root.appendChild(createMenuItem("World Drops / Other", WORLD_DROPS_ENABLED, "world", null, null, null, false));
+
+    // 2. Checkboxen für dynamische Kategorien
+    Object.keys(SOURCE_TREE).sort().forEach(cat => {
+        let catNode = createMenuItem(cat, isCategoryChecked(cat), "cat", cat, null, null, true);
+
+        let subMenu = document.createElement("ul");
+        subMenu.className = "submenu";
+
+        Object.keys(SOURCE_TREE[cat]).sort().forEach(sub => {
+            let subNode = createMenuItem(sub, isSubCategoryChecked(cat, sub), "sub", cat, sub, null, true);
+
+            let detMenu = document.createElement("ul");
+            detMenu.className = "submenu";
+
+            Object.keys(SOURCE_TREE[cat][sub]).sort().forEach(det => {
+                let label = det === "" ? "General / None" : det;
+                let detNode = createMenuItem(label, SOURCE_TREE[cat][sub][det], "det", cat, sub, det, false);
+                detMenu.appendChild(detNode);
+            });
+
+            subNode.appendChild(detMenu);
+            subMenu.appendChild(subNode);
+        });
+
+        catNode.appendChild(subMenu);
+        root.appendChild(catNode);
+    });
+}
+
+function createMenuItem(label, isChecked, type, cat, sub, det, hasSubmenu) {
+    let li = document.createElement("li");
+    if (hasSubmenu) li.className = "has-submenu";
+
+    let cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.className = "source-checkbox";
+    cb.checked = isChecked;
+    
+    // Wir speichern die Art der Checkbox als Daten-Attribut im Element
+    cb.dataset.type = type;
+    if (cat !== null) cb.dataset.cat = cat;
+    if (sub !== null) cb.dataset.sub = sub;
+    if (det !== null) cb.dataset.det = det;
+
+    cb.onclick = function(e) { e.stopPropagation(); }; 
+    cb.onchange = function(e) {
+        handleSourceChange(type, cat, sub, det, e.target.checked);
+    };
+
+    let span = document.createElement("span");
+    span.innerText = label;
+
+    li.onclick = function(e) {
+        if (e.target !== cb) {
+            e.stopPropagation();
+            cb.checked = !cb.checked;
+            handleSourceChange(type, cat, sub, det, cb.checked);
+        }
+    };
+
+    li.appendChild(cb);
+    li.appendChild(span);
+    return li;
+}
+
+function handleSourceChange(type, cat, sub, det, isChecked) {
+    // 1. Daten im Hintergrund updaten
+    if (type === "world") {
+        WORLD_DROPS_ENABLED = isChecked;
+    } else if (type === "cat") {
+        setCategory(cat, isChecked);
+    } else if (type === "sub") {
+        setSubCategory(cat, sub, isChecked);
+    } else if (type === "det") {
+        SOURCE_TREE[cat][sub][det] = isChecked;
+    }
+
+    // 2. Optische Darstellung (Haken) live anpassen OHNE das HTML zu löschen
+    syncCheckboxesUI();
+    
+    // 3. Item Liste neu filtern, falls das Modal offen ist
+    updateItemListsIfOpen();
+}
+
+function syncCheckboxesUI() {
+    let checkboxes = document.querySelectorAll(".source-checkbox");
+    checkboxes.forEach(cb => {
+        let type = cb.dataset.type;
+        let cat = cb.dataset.cat;
+        let sub = cb.dataset.sub;
+        let det = cb.dataset.det;
+
+        // Reset the indeterminate state before re-evaluating
+        cb.indeterminate = false;
+
+        if (type === "world") {
+            cb.checked = WORLD_DROPS_ENABLED;
+        } else if (type === "cat") {
+            let checkedState = getCategoryCheckState(cat);
+            cb.checked = checkedState.checked;
+            cb.indeterminate = checkedState.indeterminate;
+        } else if (type === "sub") {
+            let checkedState = getSubCategoryCheckState(cat, sub);
+            cb.checked = checkedState.checked;
+            cb.indeterminate = checkedState.indeterminate;
+        } else if (type === "det") {
+            cb.checked = SOURCE_TREE[cat][sub][det];
+        }
+    });
+}
+
+// --- NEUE HELPER FUNKTIONEN FÜR INDETERMINATE STATUS ---
+
+// Returnt ein Objekt: { checked: boolean, indeterminate: boolean }
+function getCategoryCheckState(cat) {
+    let totalSubs = 0;
+    let checkedSubs = 0;
+    let hasIndeterminateSub = false;
+
+    for (let sub in SOURCE_TREE[cat]) {
+        totalSubs++;
+        let subState = getSubCategoryCheckState(cat, sub);
+        if (subState.checked) checkedSubs++;
+        if (subState.indeterminate) hasIndeterminateSub = true;
+    }
+
+    if (totalSubs === 0) return { checked: false, indeterminate: false };
+
+    if (checkedSubs === totalSubs && !hasIndeterminateSub) {
+        return { checked: true, indeterminate: false }; // Alle an
+    } else if (checkedSubs === 0 && !hasIndeterminateSub) {
+        return { checked: false, indeterminate: false }; // Alle aus
+    } else {
+        return { checked: false, indeterminate: true }; // Teilweise
+    }
+}
+
+function getSubCategoryCheckState(cat, sub) {
+    let totalDets = 0;
+    let checkedDets = 0;
+
+    for (let det in SOURCE_TREE[cat][sub]) {
+        totalDets++;
+        if (SOURCE_TREE[cat][sub][det]) checkedDets++;
+    }
+
+    if (totalDets === 0) return { checked: false, indeterminate: false };
+
+    if (checkedDets === totalDets) {
+        return { checked: true, indeterminate: false }; // Alle an
+    } else if (checkedDets === 0) {
+        return { checked: false, indeterminate: false }; // Alle aus
+    } else {
+        return { checked: false, indeterminate: true }; // Teilweise
+    }
+}
+
+function isCategoryChecked(cat) {
+    return getCategoryCheckState(cat).checked;
+}
+function isSubCategoryChecked(cat, sub) {
+    return getSubCategoryCheckState(cat, sub).checked;
+}
+
+function setCategory(cat, val) {
+    for (let sub in SOURCE_TREE[cat]) setSubCategory(cat, sub, val);
+}
+function setSubCategory(cat, sub, val) {
+    for (let det in SOURCE_TREE[cat][sub]) SOURCE_TREE[cat][sub][det] = val;
+}
+
+function updateItemListsIfOpen() {
+    var modal = document.getElementById("itemSelectorModal");
+    if (modal && !modal.classList.contains("hidden")) {
+        // Da openItemSelector validItems generiert, rufen wir dies statt filterItemList auf
+        var currentSlotTitle = document.getElementById("modalTitle").innerText.replace("Select Item: ", "");
+        openItemSelector(currentSlotTitle, currentItemSort);
+    }
+}
+
+function toggleSourceMenu(e) {
+    if(e) e.stopPropagation();
+    var menu = document.getElementById("sourceMenuRoot");
+    menu.style.display = (menu.style.display === "none" || menu.style.display === "") ? "block" : "none";
+}
+
+document.addEventListener("click", function(e) {
+    var menu = document.getElementById("sourceMenuRoot");
+    var btn = document.getElementById("sourceMenuBtn");
+    if (menu && menu.style.display === "block") {
+        if (!menu.contains(e.target) && e.target !== btn) {
+            menu.style.display = "none";
+        }
+    }
+});

@@ -74,7 +74,26 @@ function openItemSelector(slotName, sortOverride) {
                 if (eqSlot !== slotName && GEAR_SELECTION[eqSlot] === i.id) return false;
             }
         }
-        return true;
+
+        // --- SOURCE FILTER LOGIK ---
+        let isSourceEnabled = false;
+        if (!i.sources || i.sources.length === 0) {
+            isSourceEnabled = WORLD_DROPS_ENABLED;
+        } else {
+            // Checkt, ob mindestens EINE Quelle des Items im Filter aktiv ist
+            isSourceEnabled = i.sources.some(function(src) {
+                let cat = src.category || "Unknown";
+                let sub = src.subCategory || "Unknown";
+                let det = src.detail || "";
+                
+                if (SOURCE_TREE[cat] && SOURCE_TREE[cat][sub] && SOURCE_TREE[cat][sub][det] !== undefined) {
+                    return SOURCE_TREE[cat][sub][det] === true;
+                }
+                return true;
+            });
+        }
+
+        return isSourceEnabled;
     });
 
     validItems.sort((a, b) => {
@@ -378,6 +397,21 @@ function showTooltip(e, id, type = 'item') {
     html += '<hr style="border:0; border-top:1px solid rgba(255,255,255,0.2); margin:8px 0;">';
     html += '<div style="color:#ffb74d; font-weight:bold; font-size: 0.95rem;">Total EP: ' + score.ep.toFixed(1) + '</div>';
     html += '<div style="font-size:0.8rem; color:#aaa;">TEP: <span style="color:#ef5350;">' + score.tep.toFixed(1) + '</span> | MEP: <span style="color:#90caf9;">' + score.mep.toFixed(1) + '</span></div>';
+
+    // ---> NEU: Source Info anzeigen <---
+    if (item.sources && item.sources.length > 0) {
+        html += '<div class="tt-spacer"></div>';
+        html += '<div class="tt-white" style="color: #00ccff;">Sources:</div>';
+        
+        item.sources.forEach(function(src) {
+            var srcText = "";
+            if (src.category) srcText += src.category;
+            if (src.subCategory) srcText += (srcText ? " > " : "") + src.subCategory;
+            if (src.detail) srcText += (srcText ? " > " : "") + src.detail;
+            
+            html += '<div class="tt-white" style="margin-left:10px; color: #88ccff;">' + srcText + '</div>';
+        });
+    }
 
     tt.innerHTML = html;
     moveTooltip(e);
@@ -2053,3 +2087,80 @@ document.addEventListener('keydown', function (e) {
         if (typeof closeImportConfigModal === 'function') closeImportConfigModal();
     }
 });
+
+function importFromClipboard() {
+    var modal = document.getElementById('importConfigModal');
+    var textarea = document.getElementById('importConfigInput');
+    if (modal && textarea) {
+        textarea.value = ""; // Textarea leeren
+        modal.classList.remove('hidden');
+        textarea.focus();
+    }
+}
+
+function closeImportConfigModal() {
+    var modal = document.getElementById('importConfigModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+// 2. Führt den eigentlichen Import aus, wenn der User im Modal auf "Import" klickt
+function confirmImportConfig() {
+    var textarea = document.getElementById('importConfigInput');
+    if (!textarea) return;
+    var input = textarea.value.trim();
+    
+    if (!input) {
+        showToast("Please paste a valid config string.");
+        return;
+    }
+
+    if (ITEM_DB.length === 0) {
+        alert("Database not loaded yet. Please wait a moment.");
+        return;
+    }
+
+    var b64 = input;
+    if (input.includes("?s=")) { b64 = input.split("?s=")[1]; }
+
+    try {
+        var json = null;
+        if (typeof LZString !== 'undefined') {
+            json = LZString.decompressFromEncodedURIComponent(b64);
+        }
+        if (!json) {
+            try { json = atob(b64); } catch (e) { }
+        }
+
+        if (!json) throw new Error("Could not decode string");
+
+        var data = JSON.parse(json);
+        if (!Array.isArray(data)) data = [data];
+
+        data.forEach(function (s) {
+            var newId = Date.now() + Math.floor(Math.random() * 1000);
+            var simName = (Array.isArray(s) ? s[0] : (s.n || s.name || "Simulation")) + " (Imp)";
+            var newSim = new SimObject(newId, simName);
+
+            if (Array.isArray(s) && s.length === 2 && Array.isArray(s[1])) {
+                newSim.config = unpackConfig(s[1]);
+            } else if (s.d) {
+                newSim.config = unpackConfig(s.d);
+            } else if (s.config) {
+                newSim.config = s.config;
+            } else {
+                newSim.config = unpackConfig(s);
+            }
+
+            SIM_LIST.push(newSim);
+        });
+
+        closeImportConfigModal();
+        renderSidebar();
+        switchSim(SIM_LIST.length - 1);
+        showToast("Imported successfully!");
+
+    } catch (e) {
+        console.error(e);
+        alert("Invalid Config String!");
+    }
+}
