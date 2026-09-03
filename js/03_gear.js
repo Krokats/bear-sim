@@ -233,6 +233,7 @@ function calculateGearStats() {
     }
 
     // --- NEUER CODE: Enchants mitrechnen ---
+    var enchantArmor = 0;
     for (var slot in ENCHANT_SELECTION) {
         var enchId = ENCHANT_SELECTION[slot];
         if (enchId && ENCHANT_DB && ENCHANT_DB.length > 0) {
@@ -243,8 +244,8 @@ function calculateGearStats() {
                 bonus.str += (ench.strength || 0); 
                 bonus.agi += (ench.agility || 0); 
                 bonus.sta += (ench.stamina || 0);
-                bonus.armor += (ench.armor || 0) + (e.armor || 0);
-                
+                enchantArmor += (ench.armor || 0) + (e.armor || 0);
+
                 // Attack Power, Crit etc. aus dem effects Objekt
                 bonus.attackPower += (e.attackPower || 0); 
                 bonus.crit += (e.crit || 0); 
@@ -277,7 +278,7 @@ function calculateGearStats() {
 
     // --- NEU: Consumables & Buffs ---
     var consStr = 0, consAgi = 0, consSta = 0, consAP = 0, consCrit = 0, consHaste = 0;
-    var flatArmor = 0, flatHP = 0; // Skalieren nicht mit Bären-Multiplikatoren
+    var flatArmor = enchantArmor, flatHP = 0; // Skalieren nicht mit Bären-Multiplikatoren
 
     // Exclusives via Dropdown
     var dWeapon = document.getElementById("consum_weapon")?.value;
@@ -325,7 +326,7 @@ function calculateGearStats() {
     bonus.crit += consCrit;
     bonus.attackSpeed = (bonus.attackSpeed || 0) + consHaste;
 
-    if (getVal("buff_motw")) { bonus.str += 16; bonus.agi += 16; bonus.sta += 16; bonus.armor += 384; }
+    if (getVal("buff_motw")) { bonus.str += 16; bonus.agi += 16; bonus.sta += 16; flatArmor += 384; }
     if (getVal("buff_might")) bonus.attackPower += 240;
     
     // NEU: Implementierung der fehlenden Turtle WoW Raid-Buffs
