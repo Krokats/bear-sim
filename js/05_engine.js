@@ -176,7 +176,7 @@ function runSingleSim(config, captureLog) {
 
     if (config.hasGiftOfFerocity || config.gear_gift_of_ferocity) initialRage += 5;
 
-    var state = {
+   var state = {
         time: 0,
         rage: initialRage,
         died: false,               
@@ -186,45 +186,47 @@ function runSingleSim(config, captureLog) {
         damageTaken: 0,
         healingDone: 0,
 
-        // NEU: Zähler für die Tabellen
         counters: {
             bearWhite: { swings: 0, misses: 0, dodges: 0, parries: 0, glances: 0, crits: 0, hits: 0 },
-            bearYellow: { swings: 0, misses: 0, dodges: 0, parries: 0, crits: 0, hits: 0 }, // NEUER COUNTER
+            bearYellow: { swings: 0, misses: 0, dodges: 0, parries: 0, crits: 0, hits: 0 },
             boss: { swings: 0, misses: 0, dodges: 0, crits: 0, crushes: 0, hits: 0 }
         },
         
-        // Cooldowns & Timers
         gcd: 0,
         savageBiteCD: 0,
         ursaStacks: 0,           
         dreamwalkerStacks: 0,    
         obsidianScales: 0,       
         feralChargeCD: 0,
-        playerSwingTimer: 0, // Startet bei 0, damit der erste Hit sofort ausgeführt wird!
-        bossSwingTimer: config.boss_attack_speed,   // Startet bei 0, damit der Boss sofort zuschlägt!
+        playerSwingTimer: 0, 
+        bossSwingTimer: config.boss_attack_speed,   
         
-        // Attack Queue
         maulQueued: false,
 
-        // Ancient Brutality Tracking
         abTicksLeft: 0,
         nextABTick: 0,
+        nextFRTick: 0,
+        nextHp5Tick: 5.0, // NEU: Start-Timer für Major Troll's Blood
 
-        // ... in state unter "nextABTick: 0," einfügen:
-        nextFRTick: 0, // Frenzied Regeneration Tick Timer
-
-        cooldowns: { trinketShared: 0, earthstrike: 0, jomgabbar: 0, zhm: 0, potion: 0, barkskin: 0, slayersCrest: 0, kissOfSpider: 0, frenziedRegen: 0 },
+        cooldowns: { trinketShared: 0, earthstrike: 0, jomgabbar: 0, zhm: 0, potion: 0, barkskin: 0, slayersCrest: 0, kissOfSpider: 0, frenziedRegen: 0, windfury: 0 }, // NEU: WF Cooldown
         buffs: { enrage: 0, barkskinCharges: 0, ancientBrutalityICD: 0, bloodFrenzyAS: 0, clearcasting: false, earthstrike: 0, jomgabbar: 0, zhm: 0, mightyRage: 0, slayersCrest: 0, spider: 0,
                  ursaRoar: 0, dreamwalkerDuration: 0, obsidianScale: 0,
                  lionHorn: 0, castellan: 0, forceOfWill: 0, frenziedRegen: 0 }, 
         debuffs: { faerieFire: 0, demoralizingRoar: 0 , giftOfArthas: 0},
         abilityStats: {
             "Auto Attack": { count: 0, dmg: 0, hits: 0, crits: 0, glances: 0, misses: 0, dodges: 0, parries: 0 }
-        }, // Erzwingt Initialisierung
+        },
 
-        bossMechanicCD: 10.0, // Erster Einsatz der Fähigkeit nach 10 Sekunden
+        bossMechanicCD: 10.0, 
         bossBuffs: { frenzy: 0 },
-        playerDebuffs: { mortalStrike: 0 }
+        playerDebuffs: { mortalStrike: 0 },
+
+        // NEU: Erlaubt der externen Hit-Kalkulation Zugriff auf dynamische Werte
+        swingTimerReset: false,
+        getAP: getCurrentAP,
+        getSwingTime: getCurrentSwingTime,
+        natWepMod: natWepMod,
+        threatMods: threatMods
     };
 
 
@@ -362,7 +364,19 @@ function runSingleSim(config, captureLog) {
             state.nextABTick = state.time + 1.0; 
             logAction(state.time, "Tick", "Ancient Brutality", "Tick", 0, 0, 0, 4, "4 Rage");
         }
+        // --- NEU: Major Troll's Blood Tick ---
+        if (config.consum_trolls_blood && state.time >= state.nextHp5Tick) {
+            var trollHeal = 20;
+            if (state.playerDebuffs.mortalStrike > 0) trollHeal = Math.floor(trollHeal * 0.5);
 
+            if (trollHeal > 0) {
+                state.healingDone += trollHeal;
+                var trollThreat = trollHeal * 0.5 * feralInstinctMod; // 0.5 Threat pro Punkt Heal
+                state.threat += trollThreat;
+                logAction(state.time, "Tick", "Major Troll's Blood", "Healed", trollHeal, trollThreat, trollHeal, 0, "20 hp5");
+            }
+            state.nextHp5Tick = state.time + 5.0; 
+        }
         // --- NEU: Frenzied Regeneration Tick ---
         if (state.buffs.frenziedRegen > 0 && state.time >= state.nextFRTick) {
             var rageDrained = Math.min(10, state.rage); // Zieht max 10 Wut pro Sekunde
@@ -743,12 +757,17 @@ function runSingleSim(config, captureLog) {
             var autoDmg = (baseRoll + (0.175 * apDelta)) * natWepMod;
             var finalDmg = isMaul ? ((autoDmg + 128) * predStrikeDmgMod) : autoDmg;
 
-            // NEU: Wir übergeben logAction und actualCost
+            state.swingTimerReset = false; // NEU: Flag vor dem Angriff zurücksetzen
+            
+            // Führt den Angriff aus. Falls Windfury procct, wird swingTimerReset intern auf 'true' gesetzt.
             resolvePlayerAttack(finalDmg, skillName, thMod, missChance, dodgeChance, parryChance, critChance, config, state, logAction, usedClearcast, actualCost, rngPlayer, effects);
 
             // NEU: Reset Swing Timer dynamically.
-            // += verhindert, dass wir die "überschüssige" negative Zeit bei 0.05s Ticks verlieren!
-            state.playerSwingTimer += getCurrentSwingTime();
+            // += verhindert, dass überschüssige negative Zeit (aus dem 50ms Tick) verloren geht.
+            // Darf nur passieren, wenn Windfury den Timer nicht bereits hart überschrieben hat!
+            if (!state.swingTimerReset) {
+                state.playerSwingTimer += getCurrentSwingTime();
+            }
         }
 
         // --- TIME ADVANCEMENT ---
@@ -831,7 +850,7 @@ function resolvePlayerAttack(baseDmg, skillName, threatMod, miss, dodge, parry, 
     if (state.buffs.ursaRoar > 0) finalDmg += 25; // NEU: Ursa 5/6 gibt +25 Flat Physical Damage
     if (config.consum_bogling) finalDmg += 1;
 
-    var isWhiteAttack = (skillName === "Auto Attack" || skillName === "Extra Attack");
+    var isWhiteAttack = (skillName === "Auto Attack" || skillName === "Extra Attack" || skillName === "Windfury Attack");
 
     // Hilfsfunktion für Parry-Haste des Bosses
     function triggerBossParryHaste() {
@@ -901,15 +920,33 @@ function resolvePlayerAttack(baseDmg, skillName, threatMod, miss, dodge, parry, 
             if (state.playerDebuffs.mortalStrike > 0) leechAmount = Math.floor(leechAmount * 0.5); // NEU: MS Debuff
             
             if (leechAmount > 0) {
-            state.healingDone += leechAmount;
-            if (!state.abilityStats["Lifesteal (Heal)"]) state.abilityStats["Lifesteal (Heal)"] = { count: 0, dmg: 0, hits: 0, crits: 0, glances: 0, misses: 0, dodges: 0, parries: 0 };
-            state.abilityStats["Lifesteal (Heal)"].count++;
-            state.abilityStats["Lifesteal (Heal)"].hits++;
-            state.abilityStats["Lifesteal (Heal)"].dmg += leechAmount; // "dmg" wird hier für Heilung genutzt, damit es im UI auftaucht
+                state.healingDone += leechAmount;
+                if (!state.abilityStats["Lifesteal (Heal)"]) state.abilityStats["Lifesteal (Heal)"] = { count: 0, dmg: 0, hits: 0, crits: 0, glances: 0, misses: 0, dodges: 0, parries: 0 };
+                state.abilityStats["Lifesteal (Heal)"].count++;
+                state.abilityStats["Lifesteal (Heal)"].hits++;
+                state.abilityStats["Lifesteal (Heal)"].dmg += leechAmount; // "dmg" wird hier für Heilung genutzt, damit es im UI auftaucht
 
-            logAction(state.time, "Heal", "Lifesteal Item", "Healed", leechAmount, 0, leechAmount, 0, effects.leechPct + "% Leech");
+                logAction(state.time, "Heal", "Lifesteal Item", "Healed", leechAmount, 0, leechAmount, 0, effects.leechPct + "% Leech");
+            }
         }
-    }
+
+        // NEU: Windfury Totem Proc
+        if (config.buff_wf_totem && !isExtraAttack && state.cooldowns.windfury <= 0) {
+            if (rng.nextFloat() * 100 < 20.0) {
+                state.cooldowns.windfury = 2.0; // 2s Internal Cooldown
+                state.swingTimerReset = true; // Dem Main-Loop mitteilen, dass der Swing-Timer resettet wurde
+                state.playerSwingTimer = state.getSwingTime(); 
+                
+                logAction(state.time, "Proc", "Windfury Totem", "Triggered", 0, 0, 0, 0, "+315 AP Extra Attack");
+
+                var wfApDelta = Math.max(0, (state.getAP() + 315) - 300);
+                var wfBaseRoll = 178 + rng.nextFloat() * (241 - 178);
+                var wfAutoBaseDmg = (wfBaseRoll + (0.175 * wfApDelta)) * state.natWepMod;
+
+                // Extra Windfury Angriff auslösen (nutzt die korrekten übergebenen Hit-Chancen)
+                resolvePlayerAttack(wfAutoBaseDmg, "Windfury Attack", state.threatMods.auto, miss, dodge, parry, crit, config, state, logAction, false, 0, rng, effects, true);
+            }
+        }
 
         // NEU: Rage of the Ursa (3/6)
         if (effects.ursa3p && rng.nextFloat() * 100 < 5.0) {
@@ -927,18 +964,17 @@ function resolvePlayerAttack(baseDmg, skillName, threatMod, miss, dodge, parry, 
             }
         }
 
-        // NEU: Extra Attack Proc (Hand of Justice / Surrender to Madness)
+        // KORRIGIERT: Extra Attack Proc (Hand of Justice / Surrender to Madness)
         if (!isExtraAttack && effects.extraAttackChance > 0) {
             if (rng.nextFloat() * 100 < effects.extraAttackChance) {
                 logAction(state.time, "Proc", "Extra Attack", "Triggered", 0, 0, 0, 0, effects.extraAttackChance + "% Chance");
                 
-                // Berechne den Basis-Schaden für einen normalen Auto-Attack
-                var apDelta = Math.max(0, getCurrentAP() - 300);
+                // Nutzt ab jetzt state.getAP() um ReferenceErrors zu vermeiden
+                var apDelta = Math.max(0, state.getAP() - 300);
                 var baseRoll = 178 + rng.nextFloat() * (241 - 178);
-                var autoBaseDmg = (baseRoll + (0.175 * apDelta)) * natWepMod;
+                var autoBaseDmg = (baseRoll + (0.175 * apDelta)) * state.natWepMod;
                 
-                // Wir rufen resolvePlayerAttack erneut auf, aber markieren es als "Extra Attack"
-                resolvePlayerAttack(autoBaseDmg, "Extra Attack", threatMods.auto, missChance, dodgeChance, parryChance, critChance, config, state, logAction, false, 0, rng, effects, true);
+                resolvePlayerAttack(autoBaseDmg, "Extra Attack", state.threatMods.auto, miss, dodge, parry, crit, config, state, logAction, false, 0, rng, effects, true);
             }
         }
     }

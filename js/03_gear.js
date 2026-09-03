@@ -327,6 +327,14 @@ function calculateGearStats() {
 
     if (getVal("buff_motw")) { bonus.str += 16; bonus.agi += 16; bonus.sta += 16; bonus.armor += 384; }
     if (getVal("buff_might")) bonus.attackPower += 240;
+    
+    // NEU: Implementierung der fehlenden Turtle WoW Raid-Buffs
+    if (getVal("buff_bs")) bonus.attackPower += 290;
+    if (getVal("buff_fortitude")) bonus.sta += 70;
+    if (getVal("buff_bloodpact")) bonus.sta += 38;
+    if (getVal("buff_tsa")) bonus.attackPower += 100;
+    if (getVal("buff_goa_totem")) bonus.agi += 88;
+
     var kingsMult = getVal("buff_kings") ? 1.10 : 1.0;
 
     var finalStr = Math.floor((bonus.str + race.str) * kingsMult);
