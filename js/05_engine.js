@@ -224,11 +224,8 @@ function runSingleSim(config, captureLog) {
         // NEU: Erlaubt der externen Hit-Kalkulation Zugriff auf dynamische Werte
         swingTimerReset: false,
         getAP: getCurrentAP,
-        getSwingTime: getCurrentSwingTime,
-        natWepMod: natWepMod,
-        threatMods: threatMods
+        getSwingTime: getCurrentSwingTime
     };
-
 
 
     // --- NEU: EFFECT DETECTION ---
@@ -319,6 +316,8 @@ function runSingleSim(config, captureLog) {
         faerieFire: 108 * feralInstinctMod,
         demoRoar: 40 * feralInstinctMod
     };
+    state.natWepMod = natWepMod;
+    state.threatMods = threatMods;
 
     var bossLevel = config.enemy_level;
     var bossBaseDmg = config.boss_base_dmg;
