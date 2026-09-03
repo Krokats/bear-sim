@@ -241,8 +241,13 @@ function switchCommunityTab(type) {
     tabs.forEach(t => {
         const btn = document.getElementById(`tab_${t}`);
         if (btn) {
-            if (t === type) btn.classList.add("active");
-            else btn.classList.remove("active");
+            if (t === type){
+                btn.classList.add("active");
+            } 
+            else {
+                btn.classList.remove("active");    
+            }
+                
         }
     });
 
