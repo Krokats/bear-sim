@@ -761,7 +761,7 @@ function applyPhasePreset(phase) {
 
         for (let cat in SOURCE_TREE) {
             for (let sub in SOURCE_TREE[cat]) {
-                if (cat === "Raids" || cat === "Instances") {
+                if (cat === "Raids") {
                     if (allowedRaids.includes(sub)) {
                         for (let det in SOURCE_TREE[cat][sub]) {
                             SOURCE_TREE[cat][sub][det] = true;
