@@ -487,97 +487,6 @@ function calculateGearStats() {
 }
 
 // ============================================================================
-// GEAR PRESETS (SAVE/LOAD)
-// ============================================================================
-
-function populateGearPresets() {
-    var sel = document.getElementById("bis_preset_select");
-    if (!sel || typeof GEAR_PRESETS === 'undefined') return;
-    
-    sel.innerHTML = '<option value="">-- Select Preset --</option>';
-    
-    // 1. Standard Presets (aus den Hardcoded Globals)
-    var grpDef = document.createElement("optgroup");
-    grpDef.label = "Default Presets";
-    for (var key in GEAR_PRESETS) {
-        var opt = document.createElement("option");
-        opt.value = "def_" + key;
-        opt.innerText = key;
-        grpDef.appendChild(opt);
-    }
-    sel.appendChild(grpDef);
-
-    // 2. Custom Presets (aus dem LocalStorage des Browsers)
-    var customStr = localStorage.getItem("bear_sim_custom_gear");
-    if (customStr) {
-        try {
-            var custom = JSON.parse(customStr);
-            var grpCus = document.createElement("optgroup");
-            grpCus.label = "My Saved Presets";
-            for (var k in custom) {
-                var opt = document.createElement("option");
-                opt.value = "cus_" + k;
-                opt.innerText = k;
-                grpCus.appendChild(opt);
-            }
-            // Nur anhängen, wenn auch Custom Presets existieren
-            if (grpCus.children.length > 0) sel.appendChild(grpCus);
-        } catch(e) {
-            console.error("Error loading custom gear presets", e);
-        }
-    }
-}
-
-
-function saveGearPreset() {
-    var safeName = prompt("Enter a name for your custom gear preset:");
-    if (!safeName) return; // Abbruch, wenn kein Name eingegeben wurde
-    
-    // Hole bisherige Custom Presets oder erstelle leeres Objekt
-    var custom = JSON.parse(localStorage.getItem("bear_sim_custom_gear") || "{}");
-    
-    // Speichere das aktuelle Gear unter dem neuen Namen ab
-    custom[safeName] = {
-        gear: JSON.parse(JSON.stringify(GEAR_SELECTION)),
-        enchants: JSON.parse(JSON.stringify(ENCHANT_SELECTION))
-    };
-    
-    // Zurück in den LocalStorage schreiben
-    localStorage.setItem("bear_sim_custom_gear", JSON.stringify(custom));
-    
-    // Dropdown aktualisieren und das neu erstellte Preset direkt auswählen
-    populateGearPresets();
-    var sel = document.getElementById("bis_preset_select");
-    if (sel) sel.value = "cus_" + safeName;
-    
-    if(typeof showToast === 'function') showToast("Gear Preset saved!");
-}
-
-function deleteGearPreset() {
-    var sel = document.getElementById("bis_preset_select");
-    var val = sel ? sel.value : "";
-    
-    // Wir lassen den User nur Custom-Presets löschen, keine Hardcoded Defaults
-    if (!val || !val.startsWith("cus_")) { 
-        alert("Please select one of 'My Saved Presets' to delete."); 
-        return; 
-    }
-    
-    if (!confirm("Are you sure you want to delete this preset?")) return;
-    
-    var key = val.substring(4);
-    var custom = JSON.parse(localStorage.getItem("bear_sim_custom_gear") || "{}");
-    
-    // Aus dem Objekt entfernen und neu speichern
-    delete custom[key];
-    localStorage.setItem("bear_sim_custom_gear", JSON.stringify(custom));
-    
-    // Dropdown aktualisieren
-    populateGearPresets();
-    if(typeof showToast === 'function') showToast("Gear Preset deleted!");
-}
-
-// ============================================================================
 // SOURCE FILTER LOGIC (Global Multi-Level Menu)
 // ============================================================================
 var SOURCE_TREE = {};
@@ -810,3 +719,64 @@ document.addEventListener("click", function(e) {
         }
     }
 });
+
+// ============================================================================
+// PHASE PRESET LOGIC
+// ============================================================================
+function applyPhasePreset(phase) {
+    if (!SOURCE_TREE) return;
+
+    // Reset all to false first
+    WORLD_DROPS_ENABLED = false;
+    for (let cat in SOURCE_TREE) {
+        for (let sub in SOURCE_TREE[cat]) {
+            for (let det in SOURCE_TREE[cat][sub]) {
+                SOURCE_TREE[cat][sub][det] = false;
+            }
+        }
+    }
+
+    if (phase === "all") {
+        WORLD_DROPS_ENABLED = true;
+        for (let cat in SOURCE_TREE) {
+            for (let sub in SOURCE_TREE[cat]) {
+                for (let det in SOURCE_TREE[cat][sub]) {
+                    SOURCE_TREE[cat][sub][det] = true;
+                }
+            }
+        }
+    } else {
+        WORLD_DROPS_ENABLED = true;
+        let allowedRaids = [];
+        let p = parseInt(phase);
+        
+        if (p >= 0) allowedRaids.push("Lower Karazhan Halls", "Onyxia's Lair", "Molten Core");
+        if (p >= 1) allowedRaids.push("Zul'Gurub");
+        if (p >= 2) allowedRaids.push("Blackwing Lair");
+        if (p >= 3) allowedRaids.push("Emerald Sanctum");
+        if (p >= 4) allowedRaids.push("Ruins of Ahn'Qiraj", "Temple of Ahn'Qiraj");
+        if (p >= 5) allowedRaids.push("Timbermaw Hold");
+        if (p >= 6) allowedRaids.push("Naxxramas");
+        if (p >= 7) allowedRaids.push("Upper Karazhan Halls");
+
+        for (let cat in SOURCE_TREE) {
+            for (let sub in SOURCE_TREE[cat]) {
+                if (cat === "Raids" || cat === "Instances") {
+                    if (allowedRaids.includes(sub)) {
+                        for (let det in SOURCE_TREE[cat][sub]) {
+                            SOURCE_TREE[cat][sub][det] = true;
+                        }
+                    }
+                } else {
+                    // Enable everything else (Crafting, PvP, Quests, Dungeons...)
+                    for (let det in SOURCE_TREE[cat][sub]) {
+                        SOURCE_TREE[cat][sub][det] = true;
+                    }
+                }
+            }
+        }
+    }
+
+    syncCheckboxesUI();
+    updateItemListsIfOpen();
+}

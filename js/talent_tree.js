@@ -60,18 +60,6 @@ function canRemovePoint(treeName, talent) {
     return isValidTreeState(treeData, testConfig);
 }
 
-// FORMATIERT DIE BESCHREIBUNG BASIEREND AUF AKTUELLEN PUNKTEN
-function formatTalentDesc(desc, currentPts) {
-    if (!desc) return "";
-    // Sucht nach Mustern wie 2/4/6/8/10 oder 0.1/0.2/0.3
-    return desc.replace(/(\d+(?:\.\d+)?(?:(?:\/|-)\d+(?:\.\d+)?)+)/g, function (match) {
-        let parts = match.split(/[\/-]/);
-        // Wenn 0 Punkte vergeben sind, zeige Rang 1 an. Ansonsten den aktuellen Rang.
-        let idx = currentPts === 0 ? 0 : Math.min(currentPts - 1, parts.length - 1);
-        return `<span style="color:#fff; font-weight:bold;">${parts[idx]}</span>`;
-    });
-}
-
 function renderTalentTree() {
     let ptsBal = getTreePoints(TALENT_TREES["Balance"]);
     let ptsFer = getTreePoints(TALENT_TREES["Feral"]);
@@ -80,7 +68,6 @@ function renderTalentTree() {
 
     let counterLabel = document.getElementById("talentCounterText");
     if (counterLabel) {
-        // Zeigt z.B.: Points Spent: 51 / 51 (24 / 0 / 27)
         counterLabel.innerText = `Points Spent: ${total} / 51 (${ptsBal} / ${ptsFer} / ${ptsRes})`;
     }
 
@@ -97,8 +84,6 @@ function renderTalentTree() {
     renderGrid("talentGridFeral", "Feral");
     renderGrid("talentGridResto", "Restoration");
 
-    // --- BUFF CHECK (Tree of Life) ---
-    // Deaktiviert die Checkbox bei den passiven Buffs, wenn das Talent nicht geskillt ist
     let treeBuff = document.getElementById("buff_tree");
     if (treeBuff) {
         if ((TALENT_CONFIG["treeOfLife"] || 0) === 0) {
@@ -111,11 +96,8 @@ function renderTalentTree() {
         }
     }
 
-    // --- ROTATION BUILDER UPDATE ---
-    // Aktualisiert die Drag & Drop Liste und die Tool-Box live bei jedem Klick
     if (typeof renderRotationToolbox === 'function') renderRotationToolbox();
     if (typeof renderRotationList === 'function') renderRotationList();
-
     if (typeof calculateGearStats === 'function') calculateGearStats();
 }
 
@@ -123,7 +105,6 @@ function renderGrid(containerId, treeName) {
     var container = document.getElementById(containerId);
     if (!container) return;
 
-    // Bereite Container für absolute SVG-Pfeile vor
     container.innerHTML = "";
     container.style.position = "relative";
 
@@ -132,7 +113,6 @@ function renderGrid(containerId, treeName) {
     treeData.forEach(function (talent) {
         var currentPts = TALENT_CONFIG[talent.id] || 0;
         var canAdd = canAddPoint(treeName, talent);
-        var canRemove = canRemovePoint(treeName, talent);
         var disabled = !canAdd && currentPts === 0;
 
         var slot = document.createElement("div");
@@ -143,7 +123,7 @@ function renderGrid(containerId, treeName) {
 
         slot.style.gridRow = talent.row + 1;
         slot.style.gridColumn = talent.col + 1;
-        slot.style.zIndex = "2"; // Über den Pfeilen
+        slot.style.zIndex = "2"; 
         slot.style.position = "relative";
 
         var iconUrl = talent.icon && talent.icon !== "-" && talent.icon !== ""
@@ -154,11 +134,9 @@ function renderGrid(containerId, treeName) {
         slot.style.backgroundSize = "cover";
         slot.innerHTML = `<div class="talent-points">${currentPts}/${talent.max}</div>`;
 
-        // Tooltip Logik (Mouse Events)
         slot.addEventListener("mouseenter", function (e) {
             let tt = document.getElementById("wowTooltip");
             if (tt) {
-                // Nutze position: fixed statt absolute, um Container-Offsets zu umgehen
                 tt.style.position = "fixed";
                 tt.style.zIndex = "99999";
                 tt.style.pointerEvents = "none";
@@ -194,7 +172,6 @@ function renderGrid(containerId, treeName) {
 
                 tt.style.display = "block";
 
-                // ClientX / ClientY für fixierte Positionierung
                 let x = e.clientX + 15;
                 let y = e.clientY + 15;
                 if (x + 270 > window.innerWidth) x = e.clientX - 270;
@@ -224,12 +201,11 @@ function renderGrid(containerId, treeName) {
             if (tt) tt.style.display = "none";
         });
 
-        // Click Logic
         slot.addEventListener("click", function () {
             if (canAddPoint(treeName, talent)) {
                 TALENT_CONFIG[talent.id]++; renderTalentTree(); saveCurrentState();
             } else if (getTotalPoints() >= 51) {
-                showToast("Maximum of 51 Talent Points reached!");
+                if(typeof showToast === 'function') showToast("Maximum of 51 Talent Points reached!");
             }
         });
 
@@ -238,7 +214,7 @@ function renderGrid(containerId, treeName) {
             if (canRemovePoint(treeName, talent)) {
                 TALENT_CONFIG[talent.id]--; renderTalentTree(); saveCurrentState();
             } else if (currentPts > 0) {
-                showToast("Cannot remove point! Required by lower tier or dependency.");
+                if(typeof showToast === 'function') showToast("Cannot remove point! Required by lower tier or dependency.");
             }
         });
 
@@ -248,11 +224,8 @@ function renderGrid(containerId, treeName) {
     drawArrows(container, treeData);
 }
 
-// FORMATIERT DIE BESCHREIBUNG BASIEREND AUF AKTUELLEN PUNKTEN
 function formatTalentDesc(desc, currentPts) {
     if (!desc) return "";
-
-    // Sucht das Muster 2/4/6/8/10
     return desc.replace(/(\d+(?:\.\d+)?(?:(?:\/|-)\d+(?:\.\d+)?)+)/g, function (match) {
         let parts = match.split(/[\/-]/);
         let idx = currentPts === 0 ? -1 : currentPts - 1;
@@ -260,10 +233,8 @@ function formatTalentDesc(desc, currentPts) {
         let res = [];
         for (let i = 0; i < parts.length; i++) {
             if (i === idx) {
-                // Aktiver Rang wird dick & weiß hervorgehoben
                 res.push(`<span style="color:#fff; font-weight:bold; font-size:1.15em;">${parts[i]}</span>`);
             } else {
-                // Inaktive Ränge werden ausgegraut
                 res.push(`<span style="color:#888;">${parts[i]}</span>`);
             }
         }
@@ -271,8 +242,6 @@ function formatTalentDesc(desc, currentPts) {
     });
 }
 
-
-// ZEICHNET DIE ABHÄNGIGKEITS-PFEILE IM GRID
 function drawArrows(container, treeData) {
     let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.style.position = "absolute"; svg.style.top = "0"; svg.style.left = "0";
@@ -299,23 +268,20 @@ function drawArrows(container, treeData) {
 
                 if (reqT.row === t.row) {
                     if (reqT.col < t.col) {
-                        // Links -> Rechts
-                        startX = reqT.col * 60 + 46 + 15; // Rechte Kante Source
-                        startY = reqT.row * 60 + 23 + 15; // Mitte vertikal
-                        endX = t.col * 60 + 15;           // Linke Kante Target
+                        startX = reqT.col * 60 + 46 + 15; 
+                        startY = reqT.row * 60 + 23 + 15; 
+                        endX = t.col * 60 + 15;           
                         endY = t.row * 60 + 23 + 15;
                         pathStr = `M ${startX} ${startY} L ${endX - 2} ${endY}`;
                     } else {
-                        // Rechts -> Links (KORRIGIERT)
-                        startX = reqT.col * 60 + 15;      // Linke Kante Source
-                        startY = reqT.row * 60 + 23 + 15; // Mitte vertikal
-                        endX = t.col * 60 + 46 + 15;      // Rechte Kante Target
+                        startX = reqT.col * 60 + 15;      
+                        startY = reqT.row * 60 + 23 + 15; 
+                        endX = t.col * 60 + 46 + 15;      
                         endY = t.row * 60 + 23 + 15;
                         pathStr = `M ${startX} ${startY} L ${endX + 2} ${endY}`;
                     }
                 }
                 else if (reqT.col === t.col) {
-                    // Oben -> Unten
                     startX = reqT.col * 60 + 23 + 15;
                     startY = reqT.row * 60 + 46 + 15;
                     endX = t.col * 60 + 23 + 15;
@@ -323,7 +289,6 @@ function drawArrows(container, treeData) {
                     pathStr = `M ${startX} ${startY} L ${endX} ${endY - 2}`;
                 }
                 else {
-                    // L-Form Biegung (Zieht nach unten und biegt dann ab)
                     startX = reqT.col * 60 + 23 + 15;
                     startY = reqT.row * 60 + 46 + 15;
                     endX = t.col * 60 + 23 + 15;
@@ -333,7 +298,6 @@ function drawArrows(container, treeData) {
                     pathStr = `M ${startX} ${startY} L ${startX} ${bendY} L ${endX} ${bendY} L ${endX} ${endY - 2}`;
                 }
 
-                // KORRIGIERT: Wird erst Gelb, wenn das ZIEL-Talent mind. 1 Punkt hat
                 let isFulfilled = (TALENT_CONFIG[t.id] || 0) > 0;
                 let color = isFulfilled ? "#ffd100" : "#f44336";
                 let marker = isFulfilled ? "url(#arrow-yellow)" : "url(#arrow-red)";
@@ -349,52 +313,6 @@ function drawArrows(container, treeData) {
         }
     });
     container.appendChild(svg);
-}
-
-// ============================================================================
-// TALENT PRESET LOGIC
-// ============================================================================
-
-function renderTalentPresetDropdown() {
-    let select = document.getElementById("talent_preset_select");
-    if (!select) return;
-    select.innerHTML = '<option value="">-- Select Preset --</option>';
-    for (let name in TALENT_PRESETS) {
-        select.innerHTML += `<option value="${name}">${name}</option>`;
-    }
-}
-
-function loadTalentPreset() {
-    let name = document.getElementById("talent_preset_select").value;
-    if (!name || !TALENT_PRESETS[name]) return;
-
-    TALENT_CONFIG = structuredClone(TALENT_PRESETS[name]);
-    renderTalentTree();
-    saveCurrentState();
-    showToast("Talent Preset Loaded!");
-}
-
-function saveTalentPreset() {
-    let name = prompt("Enter a name for this Talent Preset:");
-    if (!name || name.trim() === "") return;
-
-    TALENT_PRESETS[name] = structuredClone(TALENT_CONFIG);
-    localStorage.setItem("resto_talent_presets", JSON.stringify(TALENT_PRESETS));
-    renderTalentPresetDropdown();
-    document.getElementById("talent_preset_select").value = name;
-    showToast("Preset Saved!");
-}
-
-function deleteTalentPreset() {
-    let name = document.getElementById("talent_preset_select").value;
-    if (!name || !TALENT_PRESETS[name]) return;
-
-    if (confirm(`Delete preset '${name}'?`)) {
-        delete TALENT_PRESETS[name];
-        localStorage.setItem("resto_talent_presets", JSON.stringify(TALENT_PRESETS));
-        renderTalentPresetDropdown();
-        showToast("Preset Deleted!");
-    }
 }
 
 function clearTalents() {
@@ -496,9 +414,6 @@ var TALENT_TREES = {
     ]
 };
 
-// ============================================================================
-// TALENT PRESETS
-// ============================================================================
 var TALENT_PRESETS = {
     "Tank (11/35/5)": {
         // Balance
