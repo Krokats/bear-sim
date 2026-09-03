@@ -1286,8 +1286,15 @@ function populatePresetDropdown() {
 var CURRENT_RESULT_VIEW = 'median'; 
 
 function switchResultView(view) {
-    document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
-    var btn = document.querySelector(`.view-btn[data-view="${view}"]`);
+    // 1. Suche die view-btn NUR innerhalb des Results-Bereichs
+    const resultArea = document.querySelector('.center-toggles'); // oder '#simResultsArea'
+    
+    if (resultArea) {
+        resultArea.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+    }
+    
+    // 2. Füge active nur dem geklickten Button im Result-Bereich hinzu
+    var btn = document.querySelector(`.center-toggles .view-btn[data-view="${view}"]`);
     if (btn) btn.classList.add('active');
     
     CURRENT_RESULT_VIEW = view;
