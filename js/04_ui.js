@@ -108,7 +108,7 @@ function openItemSelector(slotName, sortOverride) {
             : "";
     }
     
-    // --- NEU: Buttons für die Main Hand rendern ---
+    // Extra Filter für Waffen
     var extraFilters = "";
     if (slotName === "Main Hand") {
         extraFilters = `
@@ -120,7 +120,6 @@ function openItemSelector(slotName, sortOverride) {
         `;
     }
 
-    // Sortier-Buttons HTML (Angepinnt)
     var html = `
         <div style="position: sticky; top: -10px; z-index: 10; background: var(--card-bg); margin: -10px -10px 10px -10px; border-bottom: 1px solid #333; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
             <div style="display:flex; gap:10px; padding:10px; border-bottom:1px solid #333; background:rgba(0,0,0,0.4);">
@@ -156,7 +155,6 @@ function openItemSelector(slotName, sortOverride) {
         var qClass = "q" + (item.quality || 1);
         var iconUrl = getIconUrl(item.icon);
         
-        // --- NEU: data-slot hinzugefügt, um später danach zu filtern ---
         html += `<div class="modal-list-item" data-slot="${item.slot || ''}" onclick="selectItem('${slotName}', ${item.id})" 
                     onmouseenter="showTooltip(event, ${item.id}, 'item')" onmouseleave="hideTooltip()" onmousemove="moveTooltip(event)"
                     style="padding: 10px; border-bottom: 1px solid #333; cursor: pointer; display: flex; align-items: center;">
@@ -186,11 +184,9 @@ function filterItemList() {
     var listContainer = document.getElementById("modalItemList");
     var items = listContainer.getElementsByClassName("modal-list-item");
 
-    // Prüfen, ob wir gerade im Main Hand Slot sind (Buttons existieren im DOM)
     var hasWeaponFilter = document.getElementById("btn_filter_one") !== null;
 
     for (var i = 0; i < items.length; i++) {
-        // Ignoriere den "Unequip" Button (damit man Items immer ausziehen kann)
         if (items[i].innerText.includes("Unequip / None")) {
             items[i].style.display = "flex";
             continue;
@@ -202,7 +198,6 @@ function filterItemList() {
         var matchText = text.toLowerCase().indexOf(filter) > -1;
         var matchSlot = true;
 
-        // Nur Waffentypen filtern, wenn die Buttons überhaupt da sind (also Main Hand)
         if (hasWeaponFilter) {
             if (itemSlot === "Two-hand") {
                 matchSlot = MH_FILTER_TWO;
@@ -223,16 +218,6 @@ function filterItemList() {
 // ============================================================================
 // TOOLTIP LOGIC
 // ============================================================================
-
-// ============================================================================
-// TOOLTIP LOGIC (Importiert aus Feral-Sim)
-// ============================================================================
-
-// ============================================================================
-// TOOLTIP LOGIC (Angepasst für exakte Abstände & Farben)
-// ============================================================================
-
-// Hilfsfunktion für Farben (falls nicht in 02_utils.js vorhanden)
 function getItemColor(quality) {
     var colors = {
         0: '#9d9d9d', // Poor
@@ -277,7 +262,7 @@ function showTooltip(e, id, type = 'item') {
 
     if (item.armor) html += '<div style="color: #ffffff;">' + item.armor + ' Armor</div>';
 
-    // 1. STATS SAMMELN
+    // STATS 
     var statsHtml = '';
     if (item.stamina) statsHtml += '<div style="color: #ffffff;">+' + item.stamina + ' Stamina</div>';
     if (item.intellect) statsHtml += '<div style="color: #ffffff;">+' + item.intellect + ' Intellect</div>';
@@ -290,7 +275,7 @@ function showTooltip(e, id, type = 'item') {
         html += statsHtml;
     }
 
-    // 2. RESISTENZEN SAMMELN
+    // RESISTS 
     var resHtml = '';
     if (item.fireRes) resHtml += '<div style="color: #ffffff;">+' + item.fireRes + ' Fire Resistance</div>';
     if (item.natureRes) resHtml += '<div style="color: #ffffff;">+' + item.natureRes + ' Nature Resistance</div>';
@@ -303,19 +288,15 @@ function showTooltip(e, id, type = 'item') {
         html += resHtml;
     }
 
-    // 3. EFFEKTE SAMMELN (Grün)
+    // EFFECTS 
     var effectsHtml = '';
     if (item.effects) {
         var eff = item.effects;
-        
-        // Custom Texts (Feral-Sim Format)
         if (eff.custom && Array.isArray(eff.custom)) {
             eff.custom.forEach(function (line) {
                 effectsHtml += '<div style="color: #1eff00;">' + line + '</div>';
             });
         }
-        
-        // Fallback für Base-Stats
         if (eff.attackPower && effectsHtml.indexOf("Attack Power") === -1) effectsHtml += '<div style="color: #1eff00;">Equip: +' + eff.attackPower + ' Attack Power.</div>';
         if (eff.crit && effectsHtml.indexOf("critical strike") === -1) effectsHtml += '<div style="color: #1eff00;">Equip: Improves your chance to get a critical strike by ' + eff.crit + '%.</div>';
         if (eff.Hit && effectsHtml.indexOf("hit") === -1) effectsHtml += '<div style="color: #1eff00;">Equip: Improves your chance to hit by ' + eff.Hit + '%.</div>';
@@ -328,7 +309,7 @@ function showTooltip(e, id, type = 'item') {
         html += effectsHtml;
     }
 
-    // 4. SET INFO
+    // SET INFO
     if (item.setName) {
         html += '<div style="margin-top: 5px;"></div>';
         
@@ -342,10 +323,8 @@ function showTooltip(e, id, type = 'item') {
             }
         }
         
-        // 4.1 Set-Name (Gold/Gelb)
         html += '<div style="color: #ffd100;">' + item.setName + ' (' + equippedCount + '/' + siblings.length + ')</div>';
         
-        // 4.2 Set-Teile
         siblings.forEach(function (sItem) {
             var isEquipped = false;
             for (var slot in GEAR_SELECTION) {
@@ -357,7 +336,6 @@ function showTooltip(e, id, type = 'item') {
         
         html += '<div style="margin-top: 5px;"></div>';
         
-        // 4.3 Set-Effekte / Set-Bonuses
         if (item.setBonuses) {
             if (typeof item.setBonuses === 'object' && !Array.isArray(item.setBonuses)) {
                 var keys = Object.keys(item.setBonuses).sort(function (a, b) { return a - b });
@@ -366,7 +344,6 @@ function showTooltip(e, id, type = 'item') {
                     var bonusData = item.setBonuses[thresholdStr];
                     var isActive = (equippedCount >= threshold);
                     
-                    // Set-Boni in WOW: Grün (#1eff00) wenn aktiv, sonst Grau (#808080)
                     var color = isActive ? '#1eff00' : '#808080'; 
 
                     if (bonusData.custom && Array.isArray(bonusData.custom)) {
@@ -392,13 +369,13 @@ function showTooltip(e, id, type = 'item') {
         }
     }
 
-    // 5. BEAR SIM SPECIFIC EP FOOTER
+    // EP FOOTER
     var score = calculateItemScore(item, item.slot || 'Item');
     html += '<hr style="border:0; border-top:1px solid rgba(255,255,255,0.2); margin:8px 0;">';
     html += '<div style="color:#ffb74d; font-weight:bold; font-size: 0.95rem;">Total EP: ' + score.ep.toFixed(1) + '</div>';
     html += '<div style="font-size:0.8rem; color:#aaa;">TEP: <span style="color:#ef5350;">' + score.tep.toFixed(1) + '</span> | MEP: <span style="color:#90caf9;">' + score.mep.toFixed(1) + '</span></div>';
 
-    // ---> NEU: Source Info anzeigen <---
+    // Source Info 
     if (item.sources && item.sources.length > 0) {
         html += '<div class="tt-spacer"></div>';
         html += '<div class="tt-white" style="color: #00ccff;">Sources:</div>';
@@ -417,7 +394,7 @@ function showTooltip(e, id, type = 'item') {
     moveTooltip(e);
 }
 
-// Enchant Tooltip (mit Text)
+// Enchant Tooltip 
 function showEnchantTooltip(e, enchantId) {
     if (!enchantId || enchantId === 0) return;
     var ench = (typeof ENCHANT_DB !== 'undefined' ? ENCHANT_DB : []).find(x => x.id == enchantId);
@@ -429,10 +406,8 @@ function showEnchantTooltip(e, enchantId) {
 
     var html = '<div class="tt-header"><div style="flex:1"><div class="tt-name" style="color:#1eff00; font-weight:bold; font-size:1.1rem;">' + ench.name + '</div></div></div>';
     html += '<div style="color: #ffffff;">Enchant</div>';
-    
     html += '<div style="margin-top: 5px;"></div>';
 
-    // Description (Green)
     if (ench.text) {
         html += '<div style="color: #1eff00;">' + ench.text + '</div>';
     } else if (ench.effects) {
@@ -445,7 +420,6 @@ function showEnchantTooltip(e, enchantId) {
         if (ef.agility) html += '<div style="color: #1eff00;">+' + ef.agility + ' Agility</div>';
     }
 
-    // Bear EP Footer
     var score = calculateItemScore(ench, 'Enchant');
     html += '<hr style="border:0; border-top:1px solid rgba(255,255,255,0.2); margin:8px 0;">';
     html += '<div style="color:#ffb74d; font-weight:bold; font-size: 0.95rem;">Total EP: ' + score.ep.toFixed(1) + '</div>';
@@ -455,33 +429,24 @@ function showEnchantTooltip(e, enchantId) {
     moveTooltip(e);
 }
 
-
-
 function moveTooltip(e) {
     var tt = document.getElementById("wowTooltip");
     if (!tt) return;
 
-    // --- NEU: Zwingt den Tooltip, sich am Sichtfenster zu orientieren ---
-    // (Ignoriert alle übergeordneten HTML-Container)
     tt.style.position = "fixed";
 
     var width = tt.offsetWidth;
     var height = tt.offsetHeight;
 
-    // Wir nutzen wieder clientX/clientY, da "fixed" genau diese Viewport-Koordinaten verlangt
     var x = e.clientX + 15;
     var y = e.clientY + 15;
 
-    // X Logic: Verhindern, dass der Tooltip rechts aus dem Bildschirm rutscht
     if (x + width > window.innerWidth) {
         x = e.clientX - width - 15;
     }
 
-    // Y Logic: Verhindern, dass der Tooltip unten aus dem Bildschirm rutscht
     if (y + height > window.innerHeight) {
         var yUp = e.clientY - height - 15;
-        
-        // Falls er nach oben klappt, aber oben über den Rand hinausschießen würde
         if (yUp < 0) {
             y = 10; 
         } else {
@@ -498,30 +463,23 @@ function hideTooltip() {
     if (tt) tt.style.display = "none";
 }
 
-
-// Wird beim Klick auf ein Item aufgerufen
 function selectItem(slotName, itemId) {
     GEAR_SELECTION[slotName] = itemId;
 
-    // --- NEU: Exklusivität von Zweihand und Schildhand ---
     if (itemId !== 0 && ITEM_ID_MAP[itemId]) {
         var item = ITEM_ID_MAP[itemId];
         
         if (slotName === "Main Hand" && item.slot === "Two-hand") {
-            // Wenn eine Zweihandwaffe angelegt wird, entferne das Off-Hand Item
             GEAR_SELECTION["Off Hand"] = 0;
         } else if (slotName === "Off Hand") {
-            // Wenn ein Off-Hand Item angelegt wird, prüfe ob die Main-Hand eine Zweihandwaffe ist
             var mhId = GEAR_SELECTION["Main Hand"];
             if (mhId && ITEM_ID_MAP[mhId] && ITEM_ID_MAP[mhId].slot === "Two-hand") {
-                GEAR_SELECTION["Main Hand"] = 0; // Zweihandwaffe ausziehen
+                GEAR_SELECTION["Main Hand"] = 0; 
             }
         }
     }
-    // -----------------------------------------------------
 
     closeItemModal();
-    // Rechnet alles neu aus und aktualisiert die UI-Anzeige des Slots
     initGearPlannerUI(); 
 }
 
@@ -530,7 +488,6 @@ function selectItem(slotName, itemId) {
 // ============================================================================
 
 function openEnchantSelector(slotName, sortOverride) {
-    // Globale Sortiervariable aktualisieren, falls Button geklickt wurde
     if (sortOverride) currentItemSort = sortOverride;
 
     var modal = document.getElementById("enchantSelectorModal");
@@ -542,25 +499,21 @@ function openEnchantSelector(slotName, sortOverride) {
     title.innerText = "Select Enchant: " + slotName;
     listContainer.innerHTML = "";
     
-    // Slot Mapping für Enchants anwenden
     var allowedDbSlots = getDbSlots(slotName);
     var validEnchants = ENCHANT_DB.filter(e => allowedDbSlots.includes(e.slot));
 
-    // Dynamische Sortierung (EP, TEP oder MEP)
     validEnchants.sort((a, b) => {
         var scoreA = calculateItemScore(a, slotName);
         var scoreB = calculateItemScore(b, slotName);
         return scoreB[currentItemSort] - scoreA[currentItemSort];
     });
 
-    // Hilfsfunktion für aktiven Button-Style
     function getBtnStyle(sortType) {
         return currentItemSort === sortType 
             ? "background: var(--rage-red); color: #fff; border-color: var(--rage-red); box-shadow: 0 0 8px rgba(229,57,53,0.4);" 
             : "";
     }
 
-    // Sortier-Buttons HTML für Enchants (Angepinnt)
     var html = `
         <div style="position: sticky; top: -10px; z-index: 10; background: var(--card-bg); margin: -10px -10px 10px -10px; border-bottom: 1px solid #333; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
             <div style="display:flex; gap:10px; padding:10px; border-bottom:1px solid #333; background:rgba(0,0,0,0.3);">
@@ -600,7 +553,6 @@ function openEnchantSelector(slotName, sortOverride) {
 function selectEnchant(slotName, enchantId) {
     ENCHANT_SELECTION[slotName] = enchantId;
     closeEnchantModal();
-    // Rechnet alles neu aus und aktualisiert die UI
     initGearPlannerUI(); 
 }
 
@@ -609,7 +561,7 @@ function closeEnchantModal() { document.getElementById("enchantSelectorModal").c
 
 
 // ============================================================================
-// SIDEBAR & MULTI-SIM MANAGEMENT (Inkl. Comparison View)
+// SIDEBAR & MULTI-SIM MANAGEMENT
 // ============================================================================
 var IS_LOADING = false;
 
@@ -618,7 +570,6 @@ function renderSidebar() {
     if (!sb) return;
     sb.innerHTML = "";
 
-    // 1. Overview Button (Wechselt zur Comparison View)
     var btnOv = document.createElement("div");
     btnOv.className = "sidebar-btn btn-overview" + (CURRENT_VIEW === 'comparison' ? " active" : "");
     btnOv.innerHTML = "☰";
@@ -630,12 +581,10 @@ function renderSidebar() {
     sep.className = "sidebar-separator";
     sb.appendChild(sep);
 
-    // 2. Sim Buttons
     SIM_LIST.forEach(function (sim, idx) {
         var btn = document.createElement("div");
         btn.className = "sidebar-btn" + (CURRENT_VIEW !== 'comparison' && ACTIVE_SIM_INDEX === idx ? " active" : "");
 
-        // Zeige den Namen an (idR. nur die Zahl). Wenn der User einen langen Namen wählt, nehmen wir max. 2 Zeichen.
         var label = sim.name;
         if (label.length > 2 && isNaN(label)) {
             label = label.substring(0, 2).toUpperCase();
@@ -647,7 +596,6 @@ function renderSidebar() {
         sb.appendChild(btn);
     });
 
-    // 3. Add Button
     var btnAdd = document.createElement("div");
     btnAdd.className = "sidebar-btn btn-add";
     btnAdd.innerText = "+";
@@ -658,14 +606,12 @@ function renderSidebar() {
 
 function addSim(isInit) {
     var id = Date.now();
-    // Benenne neue Simulationen einfach nach der fortlaufenden Zahl (1, 2, 3...)
     var newName = "Simulation " + (SIM_LIST.length + 1);
 
     var newConfig = {};
     var newGear = {};
     var newEnchants = {};
 
-    // Kopiere den Zustand der aktuellen UI (inkl. Gear), vermeide aber das " (Copy)" Anhängsel
     if (!isInit && SIM_LIST.length > 0) {
         newConfig = getCurrentConfigFromUI();
         newGear = JSON.parse(JSON.stringify(GEAR_SELECTION));
@@ -694,16 +640,13 @@ function switchSim(index, skipSave) {
     CURRENT_VIEW = 'single';
     SIM_DATA = SIM_LIST[index];
 
-    // Daten in die UI laden
     if (SIM_DATA && SIM_DATA.config) {
         applyConfigToUI(SIM_DATA.config, SIM_DATA.gear, SIM_DATA.enchants);
     }
 
-    // Name updaten
     var nameInput = document.getElementById("simName");
     if (nameInput) nameInput.value = SIM_DATA.name;
 
-    // Sektionen Umschalten (Single View zeigen, Comparison verstecken)
     var compView = document.getElementById("comparisonView");
     var singleView = document.getElementById("singleSimView");
     if (compView) compView.classList.add("hidden");
@@ -711,7 +654,6 @@ function switchSim(index, skipSave) {
 
     renderSidebar();
 
-    // Ergebnisse updaten
     var resArea = document.getElementById("resultsArea");
     var placeholder = document.getElementById("simPlaceholder");
 
@@ -729,13 +671,13 @@ function switchSim(index, skipSave) {
         if(resArea) resArea.classList.remove("hidden");
         if (typeof renderResults === 'function') renderResults();
     }
-    // NEU: Stat Weights Container beim Wechseln der Sim wiederherstellen
+    
     var wRes = document.getElementById("weightResults");
     if (wRes) {
         if (SIM_DATA.weightResultsHTML) {
             wRes.innerHTML = SIM_DATA.weightResultsHTML;
             wRes.classList.remove("hidden");
-            window.latestSimWeights = SIM_DATA.latestSimWeights; // Stellt sicher, dass "Apply" den richtigen Wert nimmt
+            window.latestSimWeights = SIM_DATA.latestSimWeights; 
         } else {
             wRes.innerHTML = "";
             wRes.classList.add("hidden");
@@ -754,7 +696,6 @@ function deleteSim(index) {
         SIM_LIST.splice(index, 1);
         if (ACTIVE_SIM_INDEX >= SIM_LIST.length) ACTIVE_SIM_INDEX = SIM_LIST.length - 1;
         
-        // Wenn der Nutzer im Übersichts-Bildschirm war, bleibe dort
         if (CURRENT_VIEW === 'comparison') {
             renderComparisonTable();
             renderSidebar();
@@ -777,7 +718,6 @@ function updateSimName() {
 // ============================================================================
 
 function showComparisonView() {
-    // Speichere die aktuelle Sim, bevor wir in die Übersicht wechseln
     if (CURRENT_VIEW === 'single' && SIM_LIST[ACTIVE_SIM_INDEX]) {
         saveCurrentState();
     }
@@ -796,7 +736,6 @@ function getSavedStat(sim, id) {
 }
 
 function getGearShort(sim) {
-    // Zählt angelegte Items
     var count = Object.keys(sim.gear || {}).filter(k => sim.gear[k] !== 0).length;
     var sets = "";
     var c = sim.config || {};
@@ -831,7 +770,6 @@ function renderComparisonTable() {
 
         var tps = "-", ehp = "-", dtps = "-", dps = "-";
         if (r) {
-            // Lese Avg-Werte der Simulation aus
             var rView = r.avg; 
             if(rView) {
                 tps = rView.tps ? rView.tps.toFixed(1) : "-";
@@ -879,27 +817,23 @@ function runAllSims() {
         var sim = SIM_LIST[idx];
 
         try {
-            // Lade die Config für diesen Sim in die Engine, um Input sicher abzugreifen
             applyConfigToUI(sim.config, sim.gear, sim.enchants);
 
             var progressEl = document.getElementById("progressText");
             if (progressEl) progressEl.innerText = "Simulating: " + (sim.name || ("Sim " + (idx + 1)));
 
-            // Simulation im Timeout ausführen, damit das UI nicht einfriert
             setTimeout(function () {
                 var allResults = [];
                 var cfg = getSimInputs();
                 var iterations = cfg.simCount || 1000;
                 var baseSeed = cfg.sim_seed || 1337;
 
-                // Einzelne Iterationen nacheinander (Batch-Logik des Bären)
                 for (var i = 0; i < iterations; i++) {
                     cfg.sim_seed = baseSeed + i;
                     var captureLog = (i === Math.floor(iterations / 2));
-                    allResults.push(runSingleSim(cfg, captureLog)); // Aus 05_engine.js
+                    allResults.push(runSingleSim(cfg, captureLog)); 
                 }
 
-                // Ergebnisse aggregieren (Logik analog zu finalizeSimulation aus der Engine)
                 sim.results = aggregateBearBatchResults(allResults, cfg); 
 
                 var pct = Math.floor(((idx + 1) / total) * 100);
@@ -918,7 +852,6 @@ function runAllSims() {
     setTimeout(next, 50);
 }
 
-// Hilfsfunktion zur reinen Aggregation für die Tabelle, ohne das UI vom Single View upzudaten
 function aggregateBearBatchResults(results, config) {
     var tpsArr = results.map(r => r.tps).sort((a, b) => a - b);
     var dpsArr = results.map(r => r.dps).sort((a, b) => a - b);
@@ -929,16 +862,20 @@ function aggregateBearBatchResults(results, config) {
         if (arr.length === 0) return { min: 0, median: 0, max: 0, avg: 0 };
         var sum = arr.reduce((a, b) => a + b, 0);
         return {
-            min: arr[Math.floor(arr.length * 0.05)] || 0,        // 5% (Bottom 5%)
-            median: arr[Math.floor(arr.length * 0.50)] || 0,     // 50% (Median)
-            max: arr[Math.floor(arr.length * 0.95)] || 0,        // 95% (Top 5%)
-            avg: sum / arr.length                                // Bleibt für interne Berechnungen
+            min: arr[Math.floor(arr.length * 0.05)] || 0,        
+            median: arr[Math.floor(arr.length * 0.50)] || 0,     
+            max: arr[Math.floor(arr.length * 0.95)] || 0,        
+            avg: sum / arr.length                                
         };
     }
+    
+    var tpsStats = getStats(tpsArr);
+    var dpsStats = getStats(dpsArr);
+    var dtpsStats = getStats(dtpsArr);
+    var ehpStats = getStats(ehpArr);
 
     var runWithLog = results.find(r => r.log && r.log.length > 0);
 
-    // Ability Stats über alle Iterationen aggregieren
     var aggAbilityStats = {};
     results.forEach(r => {
         if (!r.abilityStats) return;
@@ -951,16 +888,15 @@ function aggregateBearBatchResults(results, config) {
         }
     });
     
-    // Durch Anzahl der Iterationen teilen (für den Durchschnitt pro Run)
     var numRuns = results.length;
     for (var name in aggAbilityStats) {
         aggAbilityStats[name].count /= numRuns;
         aggAbilityStats[name].dmg /= numRuns;
     }
 
-    var finalResults = {
+    return {
         min: { tps: tpsStats.min, dps: dpsStats.min, dtps: dtpsStats.min, ehp: ehpStats.min },
-        median: { tps: tpsStats.median, dps: dpsStats.median, dtps: dtpsStats.median, ehp: ehpStats.median }, // GEÄNDERT auf Median
+        median: { tps: tpsStats.median, dps: dpsStats.median, dtps: dtpsStats.median, ehp: ehpStats.median }, 
         max: { tps: tpsStats.max, dps: dpsStats.max, dtps: dtpsStats.max, ehp: ehpStats.max },
         raw: { tps_arr: tpsArr, dps_arr: dpsArr },
         log: runWithLog ? runWithLog.log : [],
@@ -997,7 +933,6 @@ function getCurrentConfigFromUI() {
 function saveCurrentState() {
     if (IS_LOADING) return;
     
-    // Nicht speichern, wenn wir im Comparison-View sind (Inputs könnten verdeckt sein)
     var compView = document.getElementById('comparisonView');
     if (compView && !compView.classList.contains('hidden')) return;
 
@@ -1017,7 +952,7 @@ function applyConfigToUI(cfg, gearData, enchantData) {
 
     try {
         for (var id in cfg) {
-            if (id === 'custom_rotation') continue;
+            if (id === 'custom_rotation' || id === 'talents') continue;
             var el = document.getElementById(id);
             if (el) {
                 if (el.type === 'checkbox') el.checked = (cfg[id] == 1);
@@ -1040,7 +975,6 @@ function applyConfigToUI(cfg, gearData, enchantData) {
         if (typeof TALENT_CONFIG !== 'undefined') {
             var hasTalents = false;
             if (cfg.talents) {
-                // Prüfen ob überhaupt Punkte vergeben sind
                 for (var k in cfg.talents) {
                     if (cfg.talents[k] > 0) hasTalents = true;
                 }
@@ -1053,7 +987,6 @@ function applyConfigToUI(cfg, gearData, enchantData) {
                 var tpSel = document.getElementById("talent_preset_select");
                 if (tpSel) tpSel.value = ""; 
             } else {
-                // DEFAULT PRESET LADEN, falls komplett leer!
                 if (typeof TALENT_PRESETS !== 'undefined' && TALENT_PRESETS["Tank (11/35/5)"]) {
                     TALENT_CONFIG = JSON.parse(JSON.stringify(TALENT_PRESETS["Tank (11/35/5)"]));
                     var tpSel = document.getElementById("talent_preset_select");
@@ -1072,19 +1005,17 @@ function applyConfigToUI(cfg, gearData, enchantData) {
 
 function getSimInputs() {
     var conf = {};
-    // Alle inputs/selects auslesen (dynamisch, ohne hartcodierte CONFIG_IDS)
     document.querySelectorAll("input[type='checkbox'], input[type='number'], select").forEach(el => {
         if (el.id) {
             if (el.type === 'checkbox') conf[el.id] = el.checked ? 1 : 0;
             else if (el.type === 'number') conf[el.id] = parseFloat(el.value) || 0;
-            else conf[el.id] = el.value; // Für Selects (Dropdowns)
+            else conf[el.id] = el.value; 
         }
     });
     conf.gear = JSON.parse(JSON.stringify(GEAR_SELECTION));
     conf.enchants = JSON.parse(JSON.stringify(ENCHANT_SELECTION));
     conf.rotation = JSON.parse(JSON.stringify(CUSTOM_ROTATION));
     
-    // NEU: Talente in die Config übergeben
     if (typeof TALENT_CONFIG !== 'undefined') {
         conf.talents = JSON.parse(JSON.stringify(TALENT_CONFIG));
     } else {
@@ -1104,30 +1035,27 @@ function setupUIListeners() {
         if(el) {
             el.addEventListener('change', function() {
                 if (typeof recalcItemScores === 'function') recalcItemScores();
-                saveCurrentState(); // Sofortiges Speichern beim manuellen Ändern!
+                saveCurrentState(); 
             });
         }
     });
 
-    // IN setupUIListeners() hinzufügen / anpassen:
     var statTriggerSelectors = [
         'select[id^="tal_"]',      
         'select[id^="consum_"]',   
         'input[id^="consum_"]',    
         'input[id^="buff_"]',
-        'input[id^="debuff_"]',      // NEU: Boss Debuffs
-        '#enemy_armor',              // NEU: Base Armor
-        '#stat_arp'                  // NEU: ArP
+        'input[id^="debuff_"]',      
+        '#enemy_armor',              
+        '#stat_arp'                  
     ].join(', ');
 
     document.querySelectorAll(statTriggerSelectors).forEach(function(el) {
         el.addEventListener('change', function() {
             if (typeof calculateGearStats === 'function') calculateGearStats();
-            updateBossArmorBar(); // NEU: Balken aktualisieren
+            updateBossArmorBar(); 
         });
     });
-
-    
 
     var bossSel = document.getElementById("enemy_boss_select");
     if (bossSel) {
@@ -1178,10 +1106,8 @@ function setupUIListeners() {
         });
     });
 
-    // --- NEU: Globales Auto-Save bei Input-Änderungen ---
     document.querySelectorAll("input, select").forEach(function (el) {
         el.addEventListener("change", function () {
-            // Ignoriere bestimme Felder, die nur UI-Suche sind
             if (el.id === "itemSearchInput" || el.id === "simName") return;
             
             if (ACTIVE_SIM_INDEX >= 0 && SIM_LIST[ACTIVE_SIM_INDEX]) {
@@ -1207,7 +1133,6 @@ function renderRotationBuilder() {
     var dropzone = document.getElementById("rbDropzone");
     if (!toolbox || !dropzone) return;
 
-    // 1. Render Toolbox
     toolbox.innerHTML = "";
     ROTATION_SKILLS.forEach(skill => {
         var el = document.createElement("div");
@@ -1218,7 +1143,6 @@ function renderRotationBuilder() {
         toolbox.appendChild(el);
     });
 
-    // 2. Render Dropzone
     dropzone.innerHTML = "";
     if (!CUSTOM_ROTATION || !CUSTOM_ROTATION.steps || CUSTOM_ROTATION.steps.length === 0) {
         dropzone.innerHTML = `<div id="rbEmptyState" style="color:#666; text-align:center; padding:20px; font-style:italic;">Drag skills here from the left...</div>`;
@@ -1286,7 +1210,6 @@ function renderRotationBuilder() {
         });
     }
 
-    // Dropzone Events
     dropzone.ondragover = (e) => { e.preventDefault(); dropzone.classList.add("drag-over"); };
     dropzone.ondragleave = (e) => { dropzone.classList.remove("drag-over"); };
     dropzone.ondrop = (e) => {
@@ -1360,7 +1283,7 @@ function populatePresetDropdown() {
 // RESULT RENDERING
 // ============================================================================
 
-var CURRENT_RESULT_VIEW = 'median'; // Eigene Variable für Min/Avg/Max
+var CURRENT_RESULT_VIEW = 'median'; 
 
 function switchResultView(view) {
     document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
@@ -1370,7 +1293,7 @@ function switchResultView(view) {
     CURRENT_RESULT_VIEW = view;
     renderResults();
 }
-// Globale Chart-Referenzen
+
 var chartInstances = {};
 
 function renderResults() {
@@ -1383,10 +1306,8 @@ function renderResults() {
     if(placeholder) placeholder.classList.add("hidden");
     if(resArea) resArea.classList.remove("hidden");
 
-    // Banner-Logik
     var deathBanner = document.getElementById("deathBanner");
     if (deathBanner) {
-        // Greift nun auf die GLOBALE Variable der aktuellen Sim zu, nicht mehr auf viewObj
         var dEvent = SIM_DATA.results.deathEvent; 
         
         if (dEvent) {
@@ -1422,12 +1343,10 @@ function renderResults() {
         var highlightValsTps = { min: minData.tps, median: medData.tps, max: maxData.tps };
         var highlightValsDps = { min: minData.dps, median: medData.dps, max: maxData.dps };
         
-        // CURRENT_RESULT_VIEW ('min', 'median', 'max') wird nun als aktiver View mit übergeben
         renderChart("tpsChart", SIM_DATA.results.raw.tps_arr, "rgba(229, 57, 53, 0.25)", "TPS", highlightValsTps, CURRENT_RESULT_VIEW);
         renderChart("dpsChart", SIM_DATA.results.raw.dps_arr, "rgba(255, 152, 0, 0.25)", "DPS", highlightValsDps, CURRENT_RESULT_VIEW);
     }
 
-    // Ability Tabelle für den ausgewählten Run rendern
     if (viewObj.abilities) {
         renderAbilityStatsTable(viewObj.abilities, SIM_DATA.config.simTime);
     }
@@ -1441,7 +1360,6 @@ function renderResults() {
     }
 }
 
-// Chart.js Implementierung mit dynamischem Active-Highlight
 function renderChart(canvasId, dataArr, baseColor, label, highlightVals, activeView) {
     var ctx = document.getElementById(canvasId);
     if (!ctx || !dataArr || dataArr.length === 0) return;
@@ -1454,7 +1372,6 @@ function renderChart(canvasId, dataArr, baseColor, label, highlightVals, activeV
     var globalMax = -Infinity;
     var dataKey = (label === "TPS") ? "tps_arr" : "dps_arr";
     
-    // Globale Skala über ALLE existierenden Simulationen ermitteln
     SIM_LIST.forEach(function(sim) {
         if (sim.results && sim.results.raw && sim.results.raw[dataKey]) {
             var sMin = Math.min(...sim.results.raw[dataKey]);
@@ -1464,7 +1381,6 @@ function renderChart(canvasId, dataArr, baseColor, label, highlightVals, activeV
         }
     });
     
-    // Fallback, falls etwas schiefgeht
     if (globalMin === Infinity || globalMax === -Infinity) {
         globalMin = Math.min(...dataArr);
         globalMax = Math.max(...dataArr);
@@ -1473,7 +1389,6 @@ function renderChart(canvasId, dataArr, baseColor, label, highlightVals, activeV
     var min = globalMin;
     var max = globalMax;
     
-    // Kleiner Puffer von 5%, damit die Balken nicht direkt am Rand kleben
     var range = max - min;
     if (range === 0) range = 10;
     min = Math.max(0, min - (range * 0.05));
@@ -1488,7 +1403,7 @@ function renderChart(canvasId, dataArr, baseColor, label, highlightVals, activeV
     dataArr.forEach(val => {
         var b = Math.floor((val - min) / step);
         if (b >= buckets) b = buckets - 1;
-        if (b < 0) b = 0; // Verhindert Abstürze durch Puffer
+        if (b < 0) b = 0; 
         counts[b]++;
     });
     
@@ -1496,7 +1411,6 @@ function renderChart(canvasId, dataArr, baseColor, label, highlightVals, activeV
         labels[i] = (min + (i * step)).toFixed(0);
     }
 
-    // Basis-Hintergrundfarbe für alle Säulen
     var bgColors = new Array(buckets).fill(baseColor);
     
     if (highlightVals) {
@@ -1511,20 +1425,15 @@ function renderChart(canvasId, dataArr, baseColor, label, highlightVals, activeV
         var idxMed = getBucketIndex(highlightVals.median);
         var idxMax = getBucketIndex(highlightVals.max);
 
-        // 1. Die beiden inaktiven Marker bekommen eine dezente Markierung (halb-transparentes Weiß/Grau)
         bgColors[idxMin] = "rgba(255, 255, 255, 0.4)";
         bgColors[idxMed] = "rgba(255, 255, 255, 0.4)";
         bgColors[idxMax] = "rgba(255, 255, 255, 0.4)";
 
-        // 2. Der AKTIV ausgewählte Run leuchtet kräftig auf:
-        // - Median: Kräftiges Gold (#ffd700)
-        // - 5%: Kräftiges Hellblau (#90caf9)
-        // - 95%: Kräftiges Hellblau (#90caf9)
         if (activeView === 'min') {
             bgColors[idxMin] = "#90caf9";
         } else if (activeView === 'max') {
             bgColors[idxMax] = "#90caf9";
-        } else { // 'median'
+        } else { 
             bgColors[idxMed] = "#ffd700";
         }
     }
@@ -1545,7 +1454,7 @@ function renderChart(canvasId, dataArr, baseColor, label, highlightVals, activeV
             responsive: true,
             maintainAspectRatio: false,
             animation: {
-                duration: 250 // Kurze, flüssige Animation beim Umschalten
+                duration: 250 
             },
             scales: {
                 x: { ticks: { color: '#888', maxTicksLimit: 8 }, grid: { display: false } },
@@ -1587,7 +1496,6 @@ function renderAttackTables(tablesData) {
         return htmlBar + htmlLegend;
     }
 
-    // Bear Attacks Boss (White Hits)
     var bearPoints = [
         { label: "Miss", width: getPctRaw(cBear.misses, cBear.swings), color: "#aaa" },
         { label: "Dodge", width: getPctRaw(cBear.dodges, cBear.swings), color: "#90caf9" },
@@ -1597,7 +1505,6 @@ function renderAttackTables(tablesData) {
         { label: "Hit", width: getPctRaw(cBear.hits, cBear.swings), color: "rgba(255,255,255,0.2)" }
     ];
 
-    // Bear Attacks Boss (Yellow Hits)
     var yellowPoints = [
         { label: "Miss", width: getPctRaw(cYellow.misses, cYellow.swings), color: "#aaa" },
         { label: "Dodge", width: getPctRaw(cYellow.dodges, cYellow.swings), color: "#90caf9" },
@@ -1606,7 +1513,6 @@ function renderAttackTables(tablesData) {
         { label: "Hit", width: getPctRaw(cYellow.hits, cYellow.swings), color: "rgba(255,255,255,0.2)" }
     ];
 
-    // Boss Attacks Bear
     var bossPoints = [
         { label: "Miss", width: getPctRaw(cBoss.misses, cBoss.swings), color: "#aaa" },
         { label: "Dodge", width: getPctRaw(cBoss.dodges, cBoss.swings), color: "#90caf9" },
@@ -1615,7 +1521,6 @@ function renderAttackTables(tablesData) {
         { label: "Hit", width: getPctRaw(cBoss.hits, cBoss.swings), color: "rgba(255,255,255,0.2)" }
     ];
 
-    // Integriert beide Balken (White & Yellow) untereinander in die selbe Box
     var htmlCombined = 
         `<div style="margin-bottom: 5px; font-size: 0.8rem; color:#aaa; font-weight: bold;">WHITE HITS (Auto Attack / Extra Attacks)</div>` +
         buildStackedBar(bearPoints) +
@@ -1660,7 +1565,6 @@ function renderAbilityStatsTable(abilityData, simTime) {
     for (var key in abilityData) {
         var a = abilityData[key];
         
-        // Zwinge "Auto Attack", immer im UI zu erscheinen (als Feedback für den User)
         if (a.count === 0 && a.dmg === 0 && key !== "Auto Attack") continue;
 
         var dps = a.dmg / simTime;
@@ -1706,11 +1610,11 @@ function renderAbilityStatsTable(abilityData, simTime) {
     });
 }
 // ============================================================================
-// COMBAT LOG (Advanced Feral-Style für den Bären)
+// COMBAT LOG 
 // ============================================================================
 
 var LOG_DATA = [];
-var FILTERED_LOG_DATA = []; // NEU: Array für das Suchfeld
+var FILTERED_LOG_DATA = []; 
 var LOG_PAGE = 1;
 const LOG_PER_PAGE = 50;
 var LOG_BUFF_KEYS = [];
@@ -1719,7 +1623,6 @@ function renderCombatLog(log) {
     LOG_DATA = log || [];
     LOG_PAGE = 1;
 
-    // Welche Buffs waren im gesamten Run aktiv? (Generiert die dynamischen Spalten)
     var allKeys = new Set();
     LOG_DATA.forEach(e => {
         if (e.activeBuffs) {
@@ -1728,7 +1631,6 @@ function renderCombatLog(log) {
     });
     LOG_BUFF_KEYS = Array.from(allKeys).sort();
 
-    // Initial filtern (falls noch Text im Suchfeld von vorherigen Läufen steht)
     if (typeof filterCombatLog === 'function') {
         filterCombatLog();
     } else {
@@ -1737,7 +1639,6 @@ function renderCombatLog(log) {
     }
 }
 
-// NEU: Globale Filterfunktion (wird bei onkeyup im Suchfeld aufgerufen)
 window.filterCombatLog = function() {
     var input = document.getElementById("logSearchInput");
     if (!input) return;
@@ -1747,7 +1648,6 @@ window.filterCombatLog = function() {
         FILTERED_LOG_DATA = [...LOG_DATA];
     } else {
         FILTERED_LOG_DATA = LOG_DATA.filter(e => {
-            // Alle potenziell sichtbaren Spalten der Zeile zu einem Text-Array zusammenfassen
             var rowText = [
                 e.time.toFixed(2),
                 e.event || "",
@@ -1766,25 +1666,22 @@ window.filterCombatLog = function() {
                 e.info || ""
             ];
             
-            // Buff-Spalten hinzufügen
             LOG_BUFF_KEYS.forEach(key => {
                 if (e.activeBuffs && e.activeBuffs[key] !== undefined) {
                     rowText.push(e.activeBuffs[key]);
                 }
             });
             
-            // Prüfen, ob der Suchtext irgendwo in der kombinierten Zeile steht
             return rowText.join(" ").toLowerCase().includes(searchStr);
         });
     }
-    LOG_PAGE = 1; // Nach jeder Suche zurück auf Seite 1
+    LOG_PAGE = 1; 
     updateLogView();
 };
 
 function updateLogView() {
     var container = document.getElementById("logTableHeader");
     if (container) {
-        // Neue Header-Struktur für den Bären
         let headerHtml = `
             <th style="text-align:left;">Time</th>
             <th style="text-align:left;">Event</th>
@@ -1801,7 +1698,6 @@ function updateLogView() {
             <th style="text-align:right;">Haste</th>
             <th style="text-align:right;">ArP</th>`;
 
-        // Dynamische Buff-Spalten
         LOG_BUFF_KEYS.forEach(key => {
             headerHtml += `<th style="text-align:center;">${key}</th>`;
         });
@@ -1827,17 +1723,16 @@ function updateLogView() {
     slice.forEach(e => {
         var tr = document.createElement("tr");
 
-        // Farbgebung (White Hit, Yellow Hit, Enemy Dmg, Avoidance)
         if (e.event === "Damage Taken") {
-            tr.style.backgroundColor = "rgba(229, 57, 53, 0.15)"; // Rot
+            tr.style.backgroundColor = "rgba(229, 57, 53, 0.15)"; 
         } else if (e.ability === "Auto Attack" || e.ability === "Extra Attack") {
-            tr.style.backgroundColor = "rgba(255, 255, 255, 0.05)"; // White Hit
+            tr.style.backgroundColor = "rgba(255, 255, 255, 0.05)"; 
         } else if (["Maul", "Swipe", "Savage Bite"].includes(e.ability)) {
-            tr.style.backgroundColor = "rgba(255, 215, 0, 0.15)"; // Yellow Hit
+            tr.style.backgroundColor = "rgba(255, 215, 0, 0.15)"; 
         } else if (e.event === "Buff" || e.event === "Proc" || e.event === "Debuff") {
-            tr.style.backgroundColor = "rgba(197, 134, 192, 0.2)"; // Lila (Auren)
+            tr.style.backgroundColor = "rgba(197, 134, 192, 0.2)"; 
         } else if (e.event === "Avoidance") {
-            tr.style.backgroundColor = "rgba(144, 202, 249, 0.15)"; // Blau (Dodge/Parry)
+            tr.style.backgroundColor = "rgba(144, 202, 249, 0.15)"; 
         }
 
         var rChangeStyle = e.rageChange > 0 ? "color:#ef5350; font-weight:bold;" : (e.rageChange < 0 ? "color:#ccc;" : "");
@@ -1854,7 +1749,7 @@ function updateLogView() {
             <td style="${hpChangeStyle} text-align:right; padding:4px 8px; border-bottom:1px solid #333;">${e.hpChange ? (e.hpChange > 0 ? "+"+e.hpChange : e.hpChange) : ""}</td>
             <td style="color:#ef5350; text-align:right; padding:4px 8px; border-bottom:1px solid #333;">${e.rage !== undefined ? Math.floor(e.rage) : ""}</td>
             <td style="${rChangeStyle} text-align:right; padding:4px 8px; border-bottom:1px solid #333;">${e.rageChange ? (e.rageChange > 0 ? "+"+Math.floor(e.rageChange) : Math.floor(e.rageChange)) : ""}</td>
-            <td style="color:#90caf9; text-align:right; padding:4px 8px; border-bottom:1px solid #333;">${e.armor || ""}</td> <!-- NEU -->
+            <td style="color:#90caf9; text-align:right; padding:4px 8px; border-bottom:1px solid #333;">${e.armor || ""}</td> 
             <td style="text-align:right; padding:4px 8px; border-bottom:1px solid #333;">${e.ap || ""}</td>
             <td style="text-align:right; padding:4px 8px; border-bottom:1px solid #333;">${e.haste !== undefined ? e.haste.toFixed(1) + "%" : ""}</td>
             <td style="text-align:right; padding:4px 8px; border-bottom:1px solid #333;">${e.arp || ""}</td>
@@ -1871,7 +1766,6 @@ function updateLogView() {
         tb.appendChild(tr);
     });
 
-    // Paginierungs-Anzeige aktualisieren (die Buttons hattest du schon in der index.html)
     var pageLabel = document.getElementById("logPageLabel");
     if (pageLabel) {
         var maxPages = Math.ceil(FILTERED_LOG_DATA.length / LOG_PER_PAGE);
@@ -1880,7 +1774,6 @@ function updateLogView() {
     }
 }
 
-// Global scope definieren, damit Buttons im HTML greifen
 window.nextLogPage = function() {
     if (LOG_PAGE * LOG_PER_PAGE < FILTERED_LOG_DATA.length) { LOG_PAGE++; updateLogView(); }
 };
@@ -1903,23 +1796,20 @@ function updateDamageScaling() {
     const tPredStrikes = 1.0 + (arr7_14_20[t.predatoryStrikes || 0] || 0); 
     const tFeralInstinct = 1.0 + ((t.feralInstinct || 0) * 0.05);
 
-    // Basis-Schaden aus Info[cite: 10]
-    const avgBase = 209; // Auto-Attack Base Range (178 - 241)
+    const avgBase = 209; 
     const baseAP = 300; 
 
-    // Raw Damage Calculations[cite: 10]
     const dmgAuto = (avgBase + 0.175 * (ap - baseAP)) * tNatWep;
     const dmgMaul = (dmgAuto + 128) * tPredStrikes;
     const dmgSavageBite = ((dmgAuto * 0.80) + 30) * tPredStrikes;
     const dmgSwipe = (94 + 0.038 * (ap - baseAP)) * tPredStrikes * tNatWep;
-    const dmgThorns = 18; // Flat Nature Damage
+    const dmgThorns = 18; 
 
-    // Threat Multipliers[cite: 10]
     const threatAuto = 1.30 * tFeralInstinct;
     const threatMaul = 1.95 * tFeralInstinct;
     const threatSwipe = 1.75 * tFeralInstinct;
     const threatSavageBite = 2.60 * tFeralInstinct;
-    const threatThorns = 1.30 * tFeralInstinct; // Dire Bear Form Modifier
+    const threatThorns = 1.30 * tFeralInstinct; 
 
     const abilities = [
         {
@@ -1982,12 +1872,9 @@ function updateBossArmorBar() {
     
     var effectiveArmor = Math.max(0, baseArmor - debuffArmor - arp);
     
-    // DR Formel für Level 60 Angreifer (Bär) vs Boss
-    // Damage Reduction = Armor / (Armor + 400 + 85 * AttackerLevel)
     var dr = effectiveArmor / (effectiveArmor + 400 + (85 * 60));
     var drPct = (dr * 100).toFixed(1);
     
-    // UI Update
     var valEl = document.getElementById("ui_boss_armor_val");
     var barEl = document.getElementById("ui_boss_dr_bar");
     var drEl = document.getElementById("ui_boss_dr_val");
@@ -2021,17 +1908,15 @@ function closeGearPresetModal() {
     if (modal) modal.classList.add('hidden');
 }
 
-// 1. Wird beim Klick auf "Load" aufgerufen
 window.loadBiSPreset = function() {
     var sel = document.getElementById("bis_preset_select");
     if (!sel || !sel.value) { 
-        showToast("Please select a preset from the dropdown first."); 
+        if(typeof showToast === 'function') showToast("Please select a preset from the dropdown first."); 
         return; 
     }
     openGearPresetModal();
 };
 
-// 2. Wird beim Klick auf "Yes, replace" im Modal aufgerufen
 window.confirmLoadBiSPreset = function() {
     var sel = document.getElementById("bis_preset_select");
     if (!sel) return;
@@ -2074,10 +1959,9 @@ window.confirmLoadBiSPreset = function() {
     saveCurrentState();
     
     closeGearPresetModal();
-    showToast("Gear Preset loaded!");
+    if(typeof showToast === 'function') showToast("Gear Preset loaded!");
 };
 
-// Escape-Key schließt sämtliche Modals
 document.addEventListener('keydown', function (e) {
     if (e.key === "Escape") {
         closeOtherSimsModal();
@@ -2088,11 +1972,35 @@ document.addEventListener('keydown', function (e) {
     }
 });
 
+// ============================================================================
+// EXPORT & IMPORT (URL & JSON STRINGS)
+// ============================================================================
+
+function exportSettings() {
+    if (typeof saveCurrentState === 'function') saveCurrentState();
+    
+    // Komplettes Master-Objekt bauen
+    var fullPayload = {
+        config: SIM_LIST[ACTIVE_SIM_INDEX].config,
+        gear: GEAR_SELECTION,
+        enchants: ENCHANT_SELECTION,
+        talents: TALENT_CONFIG,
+        rotation: CUSTOM_ROTATION
+    };
+    
+    var compressed = LZString.compressToEncodedURIComponent(JSON.stringify(fullPayload));
+    var url = window.location.origin + window.location.pathname + "?build=" + compressed;
+    
+    navigator.clipboard.writeText(url).then(function() {
+        if(typeof showToast === 'function') showToast("Full Sim URL copied to clipboard!");
+    });
+}
+
 function importFromClipboard() {
     var modal = document.getElementById('importConfigModal');
     var textarea = document.getElementById('importConfigInput');
     if (modal && textarea) {
-        textarea.value = ""; // Textarea leeren
+        textarea.value = ""; 
         modal.classList.remove('hidden');
         textarea.focus();
     }
@@ -2103,14 +2011,13 @@ function closeImportConfigModal() {
     if (modal) modal.classList.add('hidden');
 }
 
-// 2. Führt den eigentlichen Import aus, wenn der User im Modal auf "Import" klickt
 function confirmImportConfig() {
     var textarea = document.getElementById('importConfigInput');
     if (!textarea) return;
     var input = textarea.value.trim();
     
     if (!input) {
-        showToast("Please paste a valid config string.");
+        if(typeof showToast === 'function') showToast("Please paste a valid config string.");
         return;
     }
 
@@ -2120,7 +2027,9 @@ function confirmImportConfig() {
     }
 
     var b64 = input;
-    if (input.includes("?s=")) { b64 = input.split("?s=")[1]; }
+    // Parameter auswerten
+    if (input.includes("?build=")) { b64 = input.split("?build=")[1]; }
+    else if (input.includes("?s=")) { b64 = input.split("?s=")[1]; }
 
     try {
         var json = null;
@@ -2134,33 +2043,46 @@ function confirmImportConfig() {
         if (!json) throw new Error("Could not decode string");
 
         var data = JSON.parse(json);
-        if (!Array.isArray(data)) data = [data];
+        
+        var newId = Date.now() + Math.floor(Math.random() * 1000);
+        var simName = "Imported Build";
+        if (data.config && data.config.simName) simName = data.config.simName + " (Imp)";
+        
+        var newSim = new SimObject(newId, simName);
 
-        data.forEach(function (s) {
-            var newId = Date.now() + Math.floor(Math.random() * 1000);
-            var simName = (Array.isArray(s) ? s[0] : (s.n || s.name || "Simulation")) + " (Imp)";
-            var newSim = new SimObject(newId, simName);
-
-            if (Array.isArray(s) && s.length === 2 && Array.isArray(s[1])) {
-                newSim.config = unpackConfig(s[1]);
-            } else if (s.d) {
-                newSim.config = unpackConfig(s.d);
-            } else if (s.config) {
-                newSim.config = s.config;
-            } else {
-                newSim.config = unpackConfig(s);
+        // Überprüfe ob es sich um das neue Master-Objekt handelt
+        if (data.config && (data.gear || data.talents || data.rotation)) {
+            newSim.config = data.config;
+            newSim.gear = data.gear || {};
+            newSim.enchants = data.enchants || {};
+            
+            // Packe Talente und Rotation mit in die config, 
+            // damit applyConfigToUI() sie nativ verarbeiten kann
+            if (data.talents) newSim.config.talents = data.talents;
+            if (data.rotation) newSim.config.custom_rotation = data.rotation;
+        } else {
+            // Legacy Fallback (alte Save-Strings ohne Master-Struktur)
+            if (Array.isArray(data)) {
+                data = data[0]; // Erstes Array-Element bei Multi-Sims
             }
+            if (data.d) {
+                newSim.config = typeof unpackConfig === 'function' ? unpackConfig(data.d) : data.d;
+            } else if (data.config) {
+                newSim.config = data.config;
+            } else {
+                newSim.config = typeof unpackConfig === 'function' ? unpackConfig(data) : data;
+            }
+        }
 
-            SIM_LIST.push(newSim);
-        });
+        SIM_LIST.push(newSim);
 
         closeImportConfigModal();
         renderSidebar();
         switchSim(SIM_LIST.length - 1);
-        showToast("Imported successfully!");
+        if(typeof showToast === 'function') showToast("Imported successfully!");
 
     } catch (e) {
         console.error(e);
-        alert("Invalid Config String!");
+        alert("Invalid Config String! Make sure you copied the entire URL or Code.");
     }
 }

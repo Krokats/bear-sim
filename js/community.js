@@ -172,18 +172,13 @@ async function publishBuild() {
     const title = document.getElementById('publishTitle').value.trim();
     const comment = document.getElementById('publishComment').value.trim();
 
-    //if (!title) { alert("Please provide a title!"); return; }
-    if (!title) {showCustomAlert("Missin Title", "Please provide a title!"); return;}
-    //if (comment.length > 250) { alert("Comment is too long (Max 250 chars)."); return; }
+    if (!title) {showCustomAlert("Missing Title", "Please provide a title!"); return;}
     if (comment.length > 250) {showCustomAlert("Comment too long", "Comment is too long (Max 250 chars)."); return;}
 
     let dataToSave = null;
 
     if (type === 'gear') {
-        dataToSave = {
-            gear: GEAR_SELECTION,
-            enchants: ENCHANT_SELECTION
-        };
+        dataToSave = { gear: GEAR_SELECTION, enchants: ENCHANT_SELECTION };
     } else if (type === 'talents') {
         dataToSave = TALENT_CONFIG;
     } else if (type === 'rotation') {
@@ -192,42 +187,38 @@ async function publishBuild() {
         }
         dataToSave = CUSTOM_ROTATION;
     } else if (type === 'sim') {
-        saveCurrentState();
-        dataToSave = SIM_LIST[ACTIVE_SIM_INDEX].config;
+        if (typeof saveCurrentState === 'function') saveCurrentState();
+        
+        // === NEU: Vollständiges Master-Objekt für die SIM bündeln ===
+        dataToSave = {
+            config: SIM_LIST[ACTIVE_SIM_INDEX].config, // Stats, Buffs, Enemy
+            gear: GEAR_SELECTION,                      // Aktuelles Gear
+            enchants: ENCHANT_SELECTION,               // Aktuelle Enchants
+            talents: TALENT_CONFIG,                    // Talentbaum
+            rotation: CUSTOM_ROTATION                  // Prio-Liste
+        };
     }
 
     if (!dataToSave) { showCustomAlert("Error","Error grabbing data."); return; }
     
-
     const discordName = CURRENT_USER.user_metadata?.custom_claims?.global_name || CURRENT_USER.user_metadata?.full_name || 'Discord User';
-
-    showProgress("Publishing Build...");
+    if(typeof showProgress === 'function') showProgress("Publishing Build...");
     
     const { data, error } = await supabaseClient
         .from('community_builds_bear')
-        .insert([
-            {
-                type: type,
-                title: title,
-                comment: comment,
-                author_id: CURRENT_USER.id,
-                author_name: discordName,
-                data: dataToSave,
-                score: 0
-            }
-        ]);
+        .insert([{ type, title, comment, author_id: CURRENT_USER.id, author_name: discordName, data: dataToSave, score: 0 }]);
 
-    hideProgress();
+    if(typeof hideProgress === 'function') hideProgress();
 
     if (error) {
-        console.error("Error publishing:", error);
         showCustomAlert("Error","Could not publish build: " + error.message);
     } else {
-        showToast("Build published successfully!");
+        if(typeof showToast === 'function') showToast("Build published successfully!");
         closePublishModal();
-        fetchCommunityBuilds(type);
+        switchCommunityTab(type);
     }
 }
+
 
 // ============================================================================
 // 4. FETCHING & DISPLAYING BUILDS
@@ -464,7 +455,6 @@ async function voteBuild(buildId, action) {
 // ============================================================================
 // 6. LOADING / DELETING BUILDS (Mit Custom Modals)
 // ============================================================================
-
 function loadCommunityBuild(type, buttonElement) {
     showCustomConfirm("Load Build", "Are you sure you want to load this build? This will overwrite your current settings for this category.", () => {
         const dataString = buttonElement.getAttribute('data-build');
@@ -485,16 +475,44 @@ function loadCommunityBuild(type, buttonElement) {
             
             } else if (type === 'rotation') {
                 CUSTOM_ROTATION = data;
-                if(typeof renderRotationList === 'function') renderRotationList();
+                // FIX: Die korrekte Funktion heißt renderRotationBuilder
+                if(typeof renderRotationBuilder === 'function') renderRotationBuilder(); 
             
             } else if (type === 'sim') {
-                addSim(false);
-                applyConfigToUI(data);
+                // === Vollständige Simulation wiederherstellen ===
+                if(typeof addSim === 'function') addSim(false);
+                
+                // 1. Basis-Config laden (Abwärtskompatibel zu alten reinen Config-Saves)
+                let simConfig = data.config ? data.config : data;
+                
+                // FIX: Packe Talente und Rotation temporär in die simConfig, 
+                // damit die Funktion applyConfigToUI sie nativ verarbeiten kann.
+                if (data.talents) simConfig.talents = data.talents;
+                if (data.rotation) simConfig.custom_rotation = data.rotation;
+                
+                // FIX: Übergib Gear und Enchants als korrekte 2. und 3. Parameter
+                if(typeof applyConfigToUI === 'function') {
+                    applyConfigToUI(simConfig, data.gear, data.enchants);
+                }
+
+                // 2. Komplexe Objekte zur Sicherheit nochmal global zuweisen
+                if (data.gear) GEAR_SELECTION = data.gear;
+                if (data.enchants) ENCHANT_SELECTION = data.enchants;
+                if (data.talents) TALENT_CONFIG = data.talents;
+                if (data.rotation) CUSTOM_ROTATION = data.rotation;
+
+                // 3. UI-Rendering forcieren, damit die Ansicht exakt stimmt
+                if(typeof initGearPlannerUI === 'function') initGearPlannerUI();
+                if(typeof renderTalentTree === 'function') renderTalentTree();
+                if(typeof renderRotationBuilder === 'function') renderRotationBuilder(); // FIX: Umbenannt
+                if(typeof calculateGearStats === 'function') calculateGearStats();
             }
 
-            saveCurrentState();
+            // Wichtig: Nach dem Laden sofort als aktuellen Status im neuen Profil sichern
+            if(typeof saveCurrentState === 'function') saveCurrentState();
+            
             closeCommunityModal();
-            showToast("Community Build successfully loaded!");
+            if(typeof showToast === 'function') showToast("Community Build successfully loaded!");
 
         } catch (error) {
             console.error("Error parsing build data:", error);
