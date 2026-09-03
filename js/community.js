@@ -225,6 +225,7 @@ async function publishBuild() {
     } else {
         showToast("Build published successfully!");
         closePublishModal();
+        fetchCommunityBuilds(type);
     }
 }
 
