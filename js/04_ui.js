@@ -2100,12 +2100,12 @@ function closeWelcomeInfoModal() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    if (!localStorage.getItem('krokatSimWelcomeShown')) {
+    if (!localStorage.getItem('krokatBearSimWelcomeShown')) {
         const welcomeModal = document.getElementById('welcomeInfoModal');
         if (welcomeModal) {
             welcomeModal.classList.remove('hidden');
         }
         
-        localStorage.setItem('krokatSimWelcomeShown', 'true');
+        localStorage.setItem('krokatBearSimWelcomeShown', 'true');
     }
 });
